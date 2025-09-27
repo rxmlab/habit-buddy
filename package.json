@@ -29,6 +29,7 @@
     "@angular/forms": "^20.2.0",
     "@angular/platform-browser": "^20.2.0",
     "@angular/router": "^20.2.0",
+    "@angular/service-worker": "^20.2.0",
     "@types/d3": "^7.4.3",
     "d3": "^7.9.0",
     "lucide-angular": "^0.544.0",

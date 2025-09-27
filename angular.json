@@ -50,7 +50,8 @@
             "gh-pages": {
               "baseHref": "/habit-buddy/",
               "deployUrl": "/habit-buddy/",
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "serviceWorker": "projects/habit-buddy/ngsw-config.json"
             },
             "development": {
               "optimization": false,
