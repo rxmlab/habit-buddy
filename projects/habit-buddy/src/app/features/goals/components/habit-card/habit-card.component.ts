@@ -1,10 +1,10 @@
-import { Component, Input, Output, EventEmitter, signal, computed, effect, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Habit, HabitStats, BadgeLevel } from '../../../../shared/models/habit.model';
-import { LucideAngularModule, Clock, Calendar, Trash2, Check, Crown, Trophy, Star, Target, Sprout, Sparkles, Link, RotateCcw, Bell } from 'lucide-angular';
-import { BADGE_LEVELS, getBadgeConfig, getBadgeConfigForDays, calculateProgressToNextLevel } from '../../../../shared/config/badge-levels.config';
-import { DialogComponent, DialogButton } from '../../../../shared/components/dialog/dialog.component';
+import { Component, computed, EventEmitter, input, Output, signal } from '@angular/core';
+import { Bell, Calendar, Check, Clock, Crown, Link, LucideAngularModule, RotateCcw, Sparkles, Sprout, Star, Target, Trash2, Trophy } from 'lucide-angular';
 import { CircularProgressComponent } from '../../../../shared/components/circular-progress/circular-progress.component';
+import { DialogButton, DialogComponent } from '../../../../shared/components/dialog/dialog.component';
+import { calculateProgressToNextLevel, getBadgeConfig, getBadgeConfigForDays } from '../../../../shared/config/badge-levels.config';
+import { Habit, HabitStats } from '../../../../shared/models/habit.model';
 
 @Component({
   selector: 'app-habit-card',

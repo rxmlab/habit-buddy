@@ -3,19 +3,21 @@
     <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" (click)="close()"></div>
     <div class="relative w-full max-w-md bg-white rounded-2xl shadow-xl max-h-[80vh] overflow-auto">
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b border-slate-100">
-        <div class="flex items-center gap-3">
-          <div class="p-2 rounded-full bg-blue-100 text-blue-600">
-            <lucide-icon [img]="ClockIcon" size="20"></lucide-icon>
+      <div class="reminder-modal-header">
+        <div class="header-content">
+          <div class="icon-section">
+            <div class="p-2 rounded-full bg-blue-100 text-blue-600">
+              <lucide-icon [img]="ClockIcon" size="20"></lucide-icon>
+            </div>
           </div>
-          <div>
+          <div class="title-section">
             <h2 class="text-lg font-semibold text-slate-900">Set Reminder</h2>
             <p class="text-sm text-slate-600">{{ habitTitle }}</p>
           </div>
         </div>
         <button 
           (click)="close()" 
-          class="p-1 rounded-full hover:bg-slate-100 transition-colors"
+          class="close-btn"
           aria-label="Close">
           <lucide-icon [img]="XIcon" size="20" class="text-slate-500"></lucide-icon>
         </button>
@@ -30,6 +32,7 @@
             name="time"
             type="time" 
             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          <p class="text-xs text-slate-500 mt-1">When should we remind you?</p>
         </div>
         
         <div>
@@ -44,11 +47,12 @@
               </button>
             }
           </div>
+          <p class="text-xs text-slate-500 mt-1">Select the days you want to be reminded</p>
         </div>
         
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">
-            Notification Window
+            Reminder Window
             <span class="text-xs text-slate-500 font-normal">(minutes)</span>
           </label>
           <input 

@@ -1,29 +1,29 @@
 .help-button {
   position: fixed;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 24px; // right-6 = 24px (same as FAB)
+  top: 50%; // Vertically centered on desktop
+  transform: translateY(-50%); // Center the button
   z-index: 1000;
   
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white;
+  width: 56px; // w-14 = 56px (exact match with FAB)
+  height: 56px; // h-14 = 56px (exact match with FAB)
+  border-radius: 50%; // rounded-full
+  background: #6366f1; // bg-indigo-500 (different color from FAB)
+  color: white; // text-white
   border: none;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); // shadow-lg
   
   display: flex;
   align-items: center;
   justify-content: center;
   
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease; // transition-all duration-200
   
   &:hover {
-    transform: translateY(-50%) scale(1.1);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
-    background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
+    transform: translateY(-50%) scale(1.05); // hover:scale-105
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); // hover:shadow-xl
+    background: #4f46e5; // hover:bg-indigo-600 (darker indigo)
   }
   
   &:active {
@@ -32,64 +32,50 @@
   
   // Open state styling
   &.help-button-open {
-    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+    background: #dc2626; // bg-red-600 (red when open)
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     
     &:hover {
-      background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
-      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
+      background: #b91c1c; // hover:bg-red-700 (darker red)
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     }
   }
   
-  // Hide on mobile since we have the help button in header
+  // Mobile positioning - above FAB with margin
   @media (max-width: 767px) {
-    display: none;
-  }
-  
-  // Adjust position for smaller screens
-  @media (max-width: 1024px) {
-    right: 16px;
+    right: 24px; // Same as FAB (right-6)
+    top: auto; // Override desktop top positioning
+    bottom: 144px; // Above FAB with margin
+    transform: none; // Remove translateY for mobile
     width: 48px;
     height: 48px;
     
     lucide-icon {
-      size: 18px;
+      size: 24px; // Match FAB icon size
+    }
+    
+    // Override hover effects for mobile
+    &:hover {
+      transform: scale(1.05); // hover:scale-105 (same as FAB)
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); // hover:shadow-xl
+      background: #4f46e5; // hover:bg-indigo-600
+    }
+    
+    &:active {
+      transform: scale(0.95); // Only scale, no translateY
+    }
+  }
+  
+  // Adjust position for smaller desktop screens
+  @media (max-width: 1024px) {
+    right: 24px; // Keep consistent with FAB position
+    width: 48px;
+    height: 48px;
+    
+    lucide-icon {
+      size: 24px; // Match FAB icon size
     }
   }
 }
 
-// Add a subtle pulse animation
-.help-button::before {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  opacity: 0.3;
-  z-index: -1;
-  animation: pulse 2s infinite;
-}
-
-// Pulse animation for open state
-.help-button-open::before {
-  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-  opacity: 0.2;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.3;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.3;
-  }
-}
+// Remove old pulse animation - now using FAB-style animations

@@ -5,7 +5,7 @@
   <!-- Main content -->
   <main class="flex-1 p-4 md:p-6 overflow-y-auto md:h-full">
     <!-- Header (mobile) -->
-    <app-header class="md:hidden mb-4" (helpClick)="onHelpClick()" />
+    <app-header class="md:hidden mb-4" />
     
     <router-outlet />
   </main>
@@ -20,13 +20,7 @@
 <!-- Audio for notifications -->
 <audio id="ding" src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"></audio>
 
-<!-- Help Overlay (mobile) -->
-<app-help-overlay 
-  [isOpen]="isHelpOverlayOpen()"
-  (close)="onHelpOverlayClose()">
-</app-help-overlay>
-
-<!-- Global Help Button (desktop) -->
+<!-- Global Help Button (desktop and mobile) -->
 <app-global-help />
 
 <!-- PWA Install Prompt -->

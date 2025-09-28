@@ -27,20 +27,22 @@
       </div>
     } @else {
       @for (habit of habitsWithReminders(); track habit.id) {
-        <div class="bg-white border border-slate-100 rounded-2xl p-4 hover:shadow-sm transition-shadow">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
+        <div class="reminder-card" (click)="editReminder(habit.id)">
+          <div class="card-content">
+            <div class="habit-info">
               <div 
-                [style]="'width:12px;height:12px;background:' + habit.color + ';border-radius:6px'">
+                class="habit-avatar"
+                [style.background-color]="habit.color">
+                {{ habit.title.charAt(0).toUpperCase() }}
               </div>
-              <div>
-                <div class="font-semibold text-slate-900">{{ habit.title }}</div>
-                <div class="text-sm text-slate-600 flex items-center gap-4 mt-1">
-                  <span class="flex items-center gap-1">
+              <div class="habit-details">
+                <div class="habit-title">{{ habit.title }}</div>
+                <div class="reminder-info">
+                  <span class="time-info">
                     <lucide-icon [img]="ClockIcon" size="14"></lucide-icon>
-                    {{ habit.reminder!.time }}
+                    {{ formatTime(habit.reminder!.time) }}
                   </span>
-                  <span class="flex items-center gap-1">
+                  <span class="days-info">
                     <lucide-icon [img]="CalendarIcon" size="14"></lucide-icon>
                     {{ getDaysText(habit.reminder!.days) }}
                   </span>
@@ -48,8 +50,8 @@
               </div>
             </div>
             <button 
-              (click)="editReminder(habit.id)"
-              class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
+              (click)="editReminder(habit.id); $event.stopPropagation()"
+              class="edit-btn">
               <lucide-icon [img]="Edit3Icon" size="14"></lucide-icon>
               Edit
             </button>
