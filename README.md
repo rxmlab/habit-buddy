@@ -1,8 +1,39 @@
-# HabitBuddy
+# Abhyatus (अभ्यास)
+
+**Discipline Through Practice** - A Sanskrit-inspired habit tracking application
+
+## About the Name
+
+**Abhyāsa (अभ्यास)** is a Sanskrit word meaning:
+- **Practice** - The act of doing something repeatedly
+- **Repetition** - Consistent effort over time  
+- **Constant effort** - Dedicated commitment to improvement
+- **Training** - Systematic development of skills
+
+This concept is central to yoga, meditation, and classical Indian philosophy. As the Bhagavad Gita states:
+
+> "अभ्यासेन तु कौन्तेय वैराग्येण च गृह्यते"  
+> "Through practice and detachment, the mind can be controlled."
+
+The suffix **"-tus"** is inspired by Latin endings (as in Habitus, Virtus, Status), giving the name a global, modern, and premium feel.
+
+**Abhyatus = Discipline through practice** → The perfect synonym for habit-building.
+
+## Features
+
+- 🎯 **Habit Tracking** - Build and maintain positive habits
+- 📊 **Progress Visualization** - Charts and statistics to track your journey
+- 🔔 **Smart Reminders** - Never miss a habit with intelligent notifications
+- 📱 **PWA Support** - Install as a native app on any device
+- 🌙 **Dark Mode** - Comfortable viewing in any lighting
+- 📅 **Calendar Integration** - Visual habit tracking over time
+- 🏆 **Achievement System** - Gamified progress with badges and streaks
+
+## Development
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.2.1.
 
-## Development server
+### Development server
 
 To start a local development server, run:
 
@@ -12,21 +43,7 @@ ng serve
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
+### Building
 
 To build the project run:
 
@@ -36,7 +53,7 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
-## Running unit tests
+### Running unit tests
 
 To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
 
@@ -44,15 +61,11 @@ To execute unit tests with the [Karma](https://karma-runner.github.io) test runn
 ng test
 ```
 
-## Running end-to-end tests
+## Philosophy
 
-For end-to-end (e2e) testing, run:
+Abhyatus embodies the ancient wisdom that **discipline is not about restriction, but about freedom**. Through consistent practice (abhyāsa), we develop the inner strength to achieve our goals and live with purpose.
 
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+*"The mind is everything. What you think you become."* - Buddha
 
 ## Additional Resources
 

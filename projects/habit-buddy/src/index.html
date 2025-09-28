@@ -2,21 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>HabitBuddy - Responsive Desktop & Mobile</title>
+  <title>Abhyatus - Transform Your Life Through Disciplined Practice | Sanskrit-Inspired Habit Tracker</title>
   <base href="./">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="Abhyatus - Transform Your Life Through Disciplined Practice">
+  <meta name="description" content="Discover the ancient Sanskrit wisdom of abhyāsa (अभ्यास) - disciplined practice. Build lasting habits, achieve your goals, and transform your life with our premium habit tracking app. Free to start, powerful to master.">
+  <meta name="keywords" content="habit tracker, Sanskrit wisdom, abhyāsa, disciplined practice, mindfulness, personal growth, habit formation, meditation, self-improvement, ancient wisdom, modern results">
+  <meta name="author" content="Abhyatus Team">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://abhyatus.app/">
+  <meta property="og:title" content="Abhyatus - Transform Your Life Through Disciplined Practice">
+  <meta property="og:description" content="Discover the ancient Sanskrit wisdom of abhyāsa (अभ्यास) - disciplined practice. Build lasting habits and achieve your goals with our premium habit tracking app.">
+  <meta property="og:image" content="./logo/abhyatus-social-preview.png">
+  <meta property="og:site_name" content="Abhyatus">
+  <meta property="og:locale" content="en_US">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://abhyatus.app/">
+  <meta property="twitter:title" content="Abhyatus - Transform Your Life Through Disciplined Practice">
+  <meta property="twitter:description" content="Discover the ancient Sanskrit wisdom of abhyāsa (अभ्यास) - disciplined practice. Build lasting habits and achieve your goals.">
+  <meta property="twitter:image" content="./logo/abhyatus-social-preview.png">
+  
+  <!-- Favicon and Icons -->
   <link rel="icon" type="image/x-icon" href="./logo/favicon.ico">
   <link rel="icon" type="image/png" sizes="16x16" href="./logo/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="./logo/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="96x96" href="./logo/favicon-96x96.png">
   
   <!-- PWA Meta Tags -->
-  <meta name="description" content="A responsive habit tracking app for desktop and mobile">
-  <meta name="theme-color" content="#3b82f6">
+  <meta name="description" content="Abhyatus - A Sanskrit-inspired habit tracking app for building discipline through practice. Transform your life with ancient wisdom and modern technology.">
+  <meta name="theme-color" content="#1e40af">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="HabitBuddy">
-  <meta name="msapplication-TileColor" content="#3b82f6">
+  <meta name="apple-mobile-web-app-title" content="Abhyatus">
+  <meta name="msapplication-TileColor" content="#1e40af">
   <meta name="msapplication-config" content="browserconfig.xml">
   
   <!-- PWA Icons -->
@@ -31,7 +56,29 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./logo/apple-icon-180x180.png">
   <link rel="manifest" href="./manifest.webmanifest">
 
-  <!-- Simple GitHub Pages setup -->
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Abhyatus",
+    "alternateName": "अभ्यास",
+    "description": "Transform your life through the ancient Sanskrit wisdom of disciplined practice. Build lasting habits and achieve your goals.",
+    "url": "https://abhyatus.app",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Web Browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "creator": {
+      "@type": "Organization",
+      "name": "Abhyatus Team"
+    },
+    "keywords": "habit tracker, Sanskrit wisdom, abhyāsa, disciplined practice, mindfulness, personal growth"
+  }
+  </script>
   
   <!-- External dependencies -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -43,6 +90,15 @@
 </head>
 <body class="bg-gray-50 text-slate-900 min-h-screen safe-area">
   <app-root></app-root>
-  <noscript>Please enable JavaScript to continue using this application.</noscript>
+  <noscript>
+    <div class="flex items-center justify-center min-h-screen bg-gray-50">
+      <div class="text-center p-8">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Welcome to Abhyatus</h1>
+        <p class="text-gray-600 mb-4">Please enable JavaScript to experience the ancient wisdom of disciplined practice.</p>
+        <p class="text-sm text-gray-500">अभ्यासेन तु कौन्तेय वैराग्येण च गृह्यते</p>
+        <p class="text-xs text-gray-400 italic">"Through practice and detachment, the mind can be controlled" - Bhagavad Gita</p>
+      </div>
+    </div>
+  </noscript>
 </body>
 </html>

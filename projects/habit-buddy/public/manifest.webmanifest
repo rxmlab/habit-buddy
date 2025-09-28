@@ -1,13 +1,16 @@
 {
-  "name": "HabitBuddy - Track Your Habits",
-  "short_name": "HabitBuddy",
-  "description": "A responsive habit tracking app for desktop and mobile",
-  "theme_color": "#3b82f6",
-  "background_color": "#ffffff",
+  "name": "Abhyatus - Transform Your Life Through Disciplined Practice",
+  "short_name": "Abhyatus",
+  "description": "Discover the ancient Sanskrit wisdom of abhyāsa (अभ्यास) - disciplined practice. Build lasting habits, achieve your goals, and transform your life with our premium habit tracking app.",
+  "theme_color": "#1e40af",
+  "background_color": "#f8fafc",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "scope": "/habit-buddy/",
-  "start_url": "/habit-buddy/",
+  "scope": "/abhyatus/",
+  "start_url": "/abhyatus/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "health", "lifestyle", "education", "mindfulness"],
   "icons": [
     {
       "src": "logo/android-icon-36x36.png",
@@ -58,7 +61,46 @@
       "purpose": "any"
     }
   ],
-  "categories": ["productivity", "health", "lifestyle"],
-  "lang": "en",
-  "dir": "ltr"
+  "screenshots": [
+    {
+      "src": "logo/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "logo/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Habit",
+      "short_name": "Add Habit",
+      "description": "Quickly add a new habit to your practice",
+      "url": "/abhyatus/goals?action=add",
+      "icons": [
+        {
+          "src": "logo/shortcut-add.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Today's Practice",
+      "short_name": "Today",
+      "description": "View and complete today's habits",
+      "url": "/abhyatus/goals?filter=today",
+      "icons": [
+        {
+          "src": "logo/shortcut-today.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

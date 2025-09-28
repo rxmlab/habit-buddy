@@ -1,5 +1,8 @@
 export const environment = {
   production: false,
+  appName: 'Abhyatus',
+  appDescription: 'Discipline Through Practice - A Sanskrit-inspired habit tracking application',
+  appVersion: '1.0.0',
   timezone: 'America/New_York', // Default timezone - can be overridden
   dateFormat: 'YYYY-MM-DD',
   timeFormat: 'HH:mm',
@@ -8,6 +11,9 @@ export const environment = {
 
 export const environmentProd = {
   production: true,
+  appName: 'Abhyatus',
+  appDescription: 'Discipline Through Practice - A Sanskrit-inspired habit tracking application',
+  appVersion: '1.0.0',
   timezone: 'America/New_York', // Default timezone - can be overridden
   dateFormat: 'YYYY-MM-DD',
   timeFormat: 'HH:mm',

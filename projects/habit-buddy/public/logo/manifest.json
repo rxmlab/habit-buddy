@@ -1,13 +1,13 @@
 {
-  "name": "HabitBuddy - Track Your Habits",
-  "short_name": "HabitBuddy",
-  "description": "A responsive habit tracking app for desktop and mobile",
+  "name": "Abhyatus - Discipline Through Practice",
+  "short_name": "Abhyatus",
+  "description": "Abhyatus - A Sanskrit-inspired habit tracking app for building discipline through practice",
   "theme_color": "#3b82f6",
   "background_color": "#ffffff",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "scope": "/habit-buddy/",
-  "start_url": "/habit-buddy/",
+  "scope": "/abhyatus/",
+  "start_url": "/abhyatus/",
   "icons": [
     {
       "src": "./logo/android-icon-36x36.png",

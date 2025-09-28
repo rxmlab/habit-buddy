@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "habit-buddy": {
+    "abhyatus": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -48,8 +48,8 @@
               "outputHashing": "all"
             },
             "gh-pages": {
-              "baseHref": "/habit-buddy/",
-              "deployUrl": "/habit-buddy/",
+              "baseHref": "/abhyatus/",
+              "deployUrl": "/abhyatus/",
               "outputHashing": "all",
               "serviceWorker": "projects/habit-buddy/ngsw-config.json"
             },
@@ -65,10 +65,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "habit-buddy:build:production"
+              "buildTarget": "abhyatus:build:production"
             },
             "development": {
-              "buildTarget": "habit-buddy:build:development"
+              "buildTarget": "abhyatus:build:development"
             }
           },
           "defaultConfiguration": "development"
