@@ -13,4 +13,12 @@
       <p class="brand-tagline">Build Better Habits</p>
     </div>
   </div>
+  <div class="header-actions">
+    <button 
+      (click)="logout()"
+      class="logout-btn"
+      title="Logout">
+      <lucide-icon [img]="LogOutIcon" size="20"></lucide-icon>
+    </button>
+  </div>
 </header>

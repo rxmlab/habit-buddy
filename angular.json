@@ -20,6 +20,7 @@
             "browser": "projects/habit-buddy/src/main.ts",
             "tsConfig": "projects/habit-buddy/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "deleteOutputPath": true,
             "assets": [
               {
                 "glob": "**/*",
@@ -45,7 +46,13 @@
                   "maximumError": "10kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "projects/habit-buddy/src/environments/environment.ts",
+                  "with": "projects/habit-buddy/src/environments/environment.prod.ts"
+                }
+              ]
             },
             "gh-pages": {
               "baseHref": "/abhyatus/",

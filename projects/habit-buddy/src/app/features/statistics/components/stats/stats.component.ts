@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, signal, OnDestroy, computed } from '@angular/core';
 import { ChartComponent } from '../../../../shared';
 import { Habit, WeeklyTrend, MonthlyTrend, YearlyTrend } from '../../../../shared/models/habit.model';
-import { HabitService, NotificationService } from '../../../../shared';
+import { HabitService } from '../../../../shared/services/habit.service';
+import { NotificationService } from '../../../../shared/services/notification.service';
 
 export type ViewType = 'weekly' | 'monthly' | 'yearly';
 

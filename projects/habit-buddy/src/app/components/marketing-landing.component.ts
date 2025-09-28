@@ -1,6 +1,5 @@
     import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { FirstVisitService } from '../shared/services/first-visit.service';
 
 @Component({
   selector: 'app-marketing-landing',
@@ -195,13 +194,11 @@ import { FirstVisitService } from '../shared/services/first-visit.service';
 })
 export class MarketingLandingComponent {
   constructor(
-    private router: Router,
-    private firstVisitService: FirstVisitService
+    private router: Router
   ) {}
 
   startJourney() {
-    // Mark user as visited so they won't see marketing page again
-    this.firstVisitService.markAsVisited();
-    this.router.navigate(['/goals']);
+    // Navigate directly to auth page without console logs
+    this.router.navigate(['/auth']);
   }
 }

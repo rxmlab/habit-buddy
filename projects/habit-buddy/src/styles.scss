@@ -1,10 +1,10 @@
 /* You can add global styles to this file, and also import other style files */
 
+/* Import global tooltip styles */
+@use './app/shared/styles/tooltips.scss';
+
 /* Tailwind CSS CDN */
 @import url('https://cdn.tailwindcss.com');
-
-/* Import global tooltip styles */
-@import './app/shared/styles/tooltips.scss';
 
 /* Global styles */
 html, body {

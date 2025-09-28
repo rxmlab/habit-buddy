@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { FirstVisitService } from '../shared/services/first-visit.service';
+import { Subject, takeUntil } from 'rxjs';
+import { AuthService } from '../shared/services/auth.service';
 
 @Component({
   selector: 'app-home',
@@ -27,20 +28,31 @@ import { FirstVisitService } from '../shared/services/first-visit.service';
     }
   `]
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
   constructor(
     private router: Router,
-    private firstVisitService: FirstVisitService
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
-    // Check if this is the user's first visit
-    if (this.firstVisitService.isFirstVisit()) {
-      // First time - show marketing page
-      this.router.navigate(['/marketing']);
-    } else {
-      // Returning user - go directly to goals
-      this.router.navigate(['/goals']);
-    }
+    // Listen to authentication state
+    this.authService.authUser$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(user => {
+        if (user) {
+          // User is authenticated - go directly to goals
+          this.router.navigate(['/goals']);
+        } else {
+          // User is not authenticated - always show marketing page
+          this.router.navigate(['/marketing']);
+        }
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

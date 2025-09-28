@@ -6,7 +6,8 @@ import { HabitCardComponent } from '../habit-card/habit-card.component';
 import { HabitFormComponent } from '../habit-form/habit-form.component';
 import { DialogService } from '../../../../shared/services/dialog.service';
 import { Habit, Reminder, BadgeLevel } from '../../../../shared/models/habit.model';
-import { HabitService, NotificationService } from '../../../../shared';
+import { HabitService } from '../../../../shared/services/habit.service';
+import { NotificationService } from '../../../../shared/services/notification.service';
 import { ReminderModalComponent } from '../../../reminders/components/reminder-modal/reminder-modal.component';
 import { LucideAngularModule, Grid3X3, Sprout, Target, Star, Trophy, Crown, Flame, Bell, Sparkles, CheckCircle, ChevronDown, Filter, Info, ArrowRight, Plus } from 'lucide-angular';
 import { getBadgeFilterOptions, BADGE_LEVELS, getBadgeConfigForDays } from '../../../../shared/config/badge-levels.config';
@@ -193,24 +194,41 @@ export class GoalsComponent implements OnInit, OnDestroy {
   }
 
   protected onHabitAdded(habit: { title: string; reminder?: Reminder | null }): void {
-    const newHabit = this.habitService.addHabit(habit.title, habit.reminder);
-    this.notificationService.playBell();
-    this.notificationService.triggerConfetti();
+    this.habitService.addHabit(habit.title, habit.reminder).subscribe({
+      next: () => {
+        this.notificationService.playBell();
+        this.notificationService.triggerConfetti();
+      },
+      error: (error: any) => {
+        console.error('Error adding habit:', error);
+        this.dialogService.showError('Failed to add habit');
+      }
+    });
   }
 
   protected async onCheckin(habitId: string): Promise<void> {
-    const result = await this.habitService.toggleCheckinToday(habitId);
-    if (result.success) {
-      this.notificationService.playSuccessSound(); // Use celebratory success sound for check-ins
-      this.notificationService.triggerConfetti();
-    } else if (result.message) {
-      this.dialogService.showError(result.message);
-    }
+    this.habitService.checkInHabit(habitId).subscribe({
+      next: () => {
+        this.notificationService.playSuccessSound();
+        this.notificationService.triggerConfetti();
+      },
+      error: (error) => {
+        console.error('Error checking in habit:', error);
+        this.dialogService.showError('Failed to check in habit');
+      }
+    });
   }
 
   protected onRemoveHabit(habitId: string): void {
-    // This is handled by the habit card's dialog component
-    this.habitService.removeHabit(habitId);
+    this.habitService.deleteHabit(habitId).subscribe({
+      next: () => {
+        console.log('Habit deleted successfully');
+      },
+      error: (error) => {
+        console.error('Error deleting habit:', error);
+        this.dialogService.showError('Failed to delete habit');
+      }
+    });
   }
 
   protected onEditReminder(habitId: string): void {
@@ -234,7 +252,15 @@ export class GoalsComponent implements OnInit, OnDestroy {
       this.habitForm.setReminder(event.reminder);
     } else {
       // Handle existing habit reminder
-      this.habitService.updateHabitReminder(event.habitId, event.reminder);
+      this.habitService.updateHabit(event.habitId, { reminder: event.reminder }).subscribe({
+        next: () => {
+          console.log('Reminder updated successfully');
+        },
+        error: (error) => {
+          console.error('Error updating reminder:', error);
+          this.dialogService.showError('Failed to update reminder');
+        }
+      });
     }
     this.selectedHabit.set(null);
   }
@@ -250,7 +276,13 @@ export class GoalsComponent implements OnInit, OnDestroy {
   }
 
   protected getHabitStats(habit: Habit) {
-    return this.habitService.calcStreaksForHabit(habit);
+    const stats = this.calcStreaksForHabit(habit);
+    return {
+      total: Object.keys(habit.checkIns || {}).length,
+      current: stats.current,
+      longest: stats.longest,
+      breaks: 0 // TODO: Calculate breaks
+    };
   }
 
   protected onFilterChange(filterValue: string): void {
@@ -323,7 +355,7 @@ export class GoalsComponent implements OnInit, OnDestroy {
 
   protected getBadgeFilterCount(level: string): number {
     return this.habits().filter(habit => {
-      const stats = this.habitService.calcStreaksForHabit(habit);
+      const stats = this.calcStreaksForHabit(habit);
       const badgeConfig = getBadgeConfigForDays(stats.current);
       return badgeConfig.level === level;
     }).length;
@@ -331,5 +363,63 @@ export class GoalsComponent implements OnInit, OnDestroy {
 
   private checkReminders(): void {
     this.notificationService.checkReminders(this.habits());
+  }
+
+  private getRandomColor(): string {
+    const colors = ['#ff6b6b', '#ffd166', '#06d6a0', '#4d96ff', '#b388eb', '#ffa07a', '#7dd3fc'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  protected calcStreaksForHabit(habit: Habit): { current: number; longest: number } {
+    if (!habit.checkIns || Object.keys(habit.checkIns).length === 0) {
+      return { current: 0, longest: 0 };
+    }
+
+    const sortedCheckIns = Object.keys(habit.checkIns).sort();
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+    for (let i = 0; i < sortedCheckIns.length; i++) {
+      const checkInDate = sortedCheckIns[i];
+      const previousCheckInDate = sortedCheckIns[i - 1];
+
+      if (i === 0) {
+        tempStreak = 1;
+      } else {
+        const prevDate = new Date(previousCheckInDate);
+        const currDate = new Date(checkInDate);
+        const diff = Math.floor((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diff === 1) {
+          tempStreak++;
+        } else if (diff > 1) {
+          tempStreak = 1;
+        }
+      }
+      longestStreak = Math.max(longestStreak, tempStreak);
+    }
+
+    // Calculate current streak based on today or yesterday
+    if (habit.checkIns[today]) {
+      currentStreak = tempStreak;
+    } else if (habit.checkIns[yesterday]) {
+      let lastDate = yesterday;
+      let streak = 0;
+      while (habit.checkIns[lastDate]) {
+        streak++;
+        const prevDate = new Date(lastDate);
+        prevDate.setDate(prevDate.getDate() - 1);
+        lastDate = prevDate.toISOString().slice(0, 10);
+      }
+      currentStreak = streak;
+    } else {
+      currentStreak = 0;
+    }
+
+    return { current: currentStreak, longest: longestStreak };
   }
 }

@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, signal, ViewChild, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HabitService, NotificationService } from '../../../../shared';
+import { HabitService } from '../../../../shared/services/habit.service';
+import { NotificationService } from '../../../../shared/services/notification.service';
 import { Habit, Reminder } from '../../../../shared/models/habit.model';
 import { ReminderModalComponent } from '../reminder-modal/reminder-modal.component';
 import { LucideAngularModule, Clock, Edit3, Calendar } from 'lucide-angular';

@@ -1,20 +1,21 @@
 import { computed, Injectable, signal, inject } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { Habit, HabitStats, Reminder, WeeklyTrend, MonthlyTrend, YearlyTrend, HabitBadge, BadgeLevel } from '../models/habit.model';
 import { TimezoneService } from './timezone.service';
+import { ApiService } from './api.service';
 import { BADGE_LEVELS, getBadgeConfigForDays, calculateProgressToNextLevel } from '../config/badge-levels.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class HabitService {
-  private readonly LS_KEY = 'habitbuddy_v2_local';
-  private readonly LAST_TS_KEY = 'habitbuddy_v2_last_ts';
   private readonly COLORS = ['#ff6b6b', '#ffd166', '#06d6a0', '#4d96ff', '#b388eb', '#ffa07a', '#7dd3fc'];
   private readonly DEFAULT_WINDOW_MIN = 120;
   private timezoneService = inject(TimezoneService);
+  private apiService = inject(ApiService);
 
-  private habitsSubject = new BehaviorSubject<Habit[]>(this.loadHabits());
+  private habitsSubject = new BehaviorSubject<Habit[]>([]);
   public habits$ = this.habitsSubject.asObservable();
   public habits = signal(this.habitsSubject.value);
 
@@ -120,43 +121,85 @@ export class HabitService {
   constructor() {
     this.habits$.subscribe(habits => {
       this.habits.set(habits);
-      this.saveHabits(habits);
     });
 
-    // Initialize with sample data if no habits exist
-    this.initializeWithSampleDataIfEmpty();
+    // Load habits from backend when user authenticates
+    this.apiService.authUser$.subscribe(user => {
+      if (user) {
+        this.loadHabitsFromBackend();
+      } else {
+        this.habitsSubject.next([]);
+      }
+    });
+  }
+
+  // Load habits from backend
+  private loadHabitsFromBackend(): void {
+    this.apiService.getHabits().subscribe({
+      next: (habits) => {
+        this.habitsSubject.next(habits);
+      },
+      error: (error) => {
+        console.error('Error loading habits from backend:', error);
+        this.habitsSubject.next([]);
+      }
+    });
+  }
+
+  // Additional methods needed by components
+  checkInHabit(habitId: string, date?: string): Observable<any> {
+    return this.apiService.checkInHabit(habitId, date);
+  }
+
+  deleteHabit(id: string): Observable<void> {
+    return this.apiService.deleteHabit(id).pipe(
+      tap(() => {
+        const currentHabits = this.habitsSubject.value;
+        this.habitsSubject.next(currentHabits.filter(h => h.id !== id));
+      })
+    );
+  }
+
+  updateHabit(id: string, habit: Partial<Habit>): Observable<Habit> {
+    return this.apiService.updateHabit(id, habit).pipe(
+      tap(updatedHabit => {
+        const currentHabits = this.habitsSubject.value;
+        const index = currentHabits.findIndex(h => h.id === id);
+        if (index !== -1) {
+          currentHabits[index] = updatedHabit;
+          this.habitsSubject.next([...currentHabits]);
+        }
+      })
+    );
+  }
+
+  getHabitsWithReminders(): Habit[] {
+    return this.habits().filter(habit => habit.reminder);
   }
 
   private loadHabits(): Habit[] {
-    try {
-      if (typeof window === 'undefined') return [];
-      const data = localStorage.getItem(this.LS_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
+    // No longer using localStorage - habits come from backend
+    return [];
   }
 
   private saveHabits(habits: Habit[]): void {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(this.LS_KEY, JSON.stringify(habits));
+    // No longer using localStorage - habits saved to backend
   }
 
-  addHabit(title: string, reminder?: Reminder | null): Habit {
-    const habit: Habit = {
-      id: this.generateId(),
+  addHabit(title: string, reminder?: Reminder | null): Observable<Habit> {
+    const habitData = {
       title: title.trim(),
-      daysTarget: 30, // Default 30 days - will be updated based on progress
+      daysTarget: 30,
       color: this.pickColor(this.habits().length),
-      createdAt: new Date().toISOString().slice(0, 10),
-      checkIns: {},
-      reminder: reminder || null,
-      badge: null // Will be assigned as user progresses
+      reminder: reminder || null
     };
 
-    const updatedHabits = [habit, ...this.habits()];
-    this.habitsSubject.next(updatedHabits);
-    return habit;
+    return this.apiService.createHabit(habitData).pipe(
+      tap(newHabit => {
+        const currentHabits = this.habitsSubject.value;
+        this.habitsSubject.next([newHabit, ...currentHabits]);
+      })
+    );
   }
 
   private getBadgeForProgress(completedDays: number): HabitBadge | null {
@@ -267,13 +310,8 @@ export class HabitService {
   }
 
   private async addCheckin(habitId: string, dateStr: string): Promise<boolean> {
-    try {
-      if (typeof window === 'undefined') return false;
-      localStorage.setItem(this.LAST_TS_KEY, JSON.stringify(Date.now()));
-      return true;
-    } catch {
-      return false;
-    }
+    // No longer using localStorage - check-ins managed by backend
+    return true;
   }
 
   private async generateCheckinHash(habitId: string, dateStr: string): Promise<string> {
@@ -335,11 +373,6 @@ export class HabitService {
 
   exportHabits(): string {
     return JSON.stringify(this.habits(), null, 2);
-  }
-
-
-  getHabitsWithReminders(): Habit[] {
-    return this.habits().filter(habit => habit.reminder);
   }
 
   /**
@@ -487,20 +520,8 @@ export class HabitService {
   }
 
   private hasClockTampering(): boolean {
-    try {
-      if (typeof window === 'undefined') return false;
-      const last = JSON.parse(localStorage.getItem(this.LAST_TS_KEY) || '0');
-      if (!last) return false;
-      const now = Date.now();
-      // Consider clock tampering if the system time moved backwards
-      // significantly compared to the last stored timestamp.
-      const driftToleranceMs = 2000; // allow small drift
-      const maxBackwardSkewMs = 2 * 60 * 1000; // 2 minutes
-      const backwardDelta = last - now;
-      return backwardDelta > (maxBackwardSkewMs + driftToleranceMs);
-    } catch {
-      return false;
-    }
+    // No longer using localStorage - clock tampering detection managed by backend
+    return false;
   }
 
   private hhmmToMins(hhmm: string): number {

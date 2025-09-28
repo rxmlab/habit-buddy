@@ -1,36 +1,48 @@
 #!/bin/bash
 
-echo "🚀 Building Abhyatus for Firebase deployment..."
+# HabitBuddy FREE Deployment Script
+# Deploys Angular frontend to Firebase Hosting (FREE)
 
-# Build the Angular app
-echo "📦 Building Angular application..."
-npm run build
+set -e
 
-# Check if build was successful
-if [ $? -eq 0 ]; then
-    echo "✅ Build successful!"
-    echo "📁 Build output: dist/abhyatus/browser"
-    
-    # Verify the build files exist
-    if [ -f "dist/abhyatus/browser/index.html" ]; then
-        echo "✅ index.html found in build output"
-    else
-        echo "❌ index.html not found in build output!"
-        exit 1
-    fi
-    
-    # Deploy to Firebase
-    echo "🔥 Deploying to Firebase Hosting..."
-    firebase deploy --only hosting
-    
-    if [ $? -eq 0 ]; then
-        echo "🎉 Deployment successful!"
-        echo "🌐 Your app is live at: https://abhyatus.firebaseapp.com/"
-    else
-        echo "❌ Deployment failed!"
-        exit 1
-    fi
-else
-    echo "❌ Build failed!"
+echo "🚀 Deploying HabitBuddy (100% FREE)..."
+
+# Check prerequisites
+if ! command -v firebase &> /dev/null; then
+    echo "❌ Firebase CLI not found. Install: npm install -g firebase-tools"
     exit 1
 fi
+
+if ! firebase projects:list &> /dev/null; then
+    echo "❌ Not logged in to Firebase. Run: firebase login"
+    exit 1
+fi
+
+# Update API URL from latest Vercel deployment
+echo "🔄 Updating API URL from latest Vercel deployment..."
+if command -v node &> /dev/null; then
+    node update-api-url.js || echo "⚠️  Warning: Could not auto-update API URL. Please update manually."
+else
+    echo "⚠️  Warning: Node.js not found. Please update API URL manually in environment.ts"
+fi
+
+# Build frontend (dist folder will be automatically cleared)
+echo "🏗️ Building Angular frontend..."
+npm run build || exit 1
+
+# Deploy frontend to Firebase Hosting (FREE)
+echo "🔥 Deploying frontend to Firebase Hosting..."
+firebase deploy --only hosting || exit 1
+
+echo ""
+echo "✅ Frontend deployed! Available at: https://abhyatus.web.app"
+echo ""
+echo "📋 Next steps for complete deployment:"
+echo "1. Deploy backend to Vercel (free):"
+echo "   cd vercel-backend && vercel --prod"
+echo ""
+echo "2. Configure Firebase Authentication:"
+echo "   - Enable Google Sign-In in Firebase Console"
+echo "   - Add your domain to authorized domains"
+echo ""
+echo "🎉 Your app is now live and FREE!"

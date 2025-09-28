@@ -6,7 +6,6 @@ import { DialogService } from '../../shared/services/dialog.service';
 import { ImportModalComponent } from '../../shared/components/import-modal/import-modal.component';
 import { DialogComponent } from '../../shared/components/dialog/dialog.component';
 import { ImportService, DuplicateAction } from '../../shared/components/import-modal/import.service';
-import { FirstVisitService } from '../../shared/services/first-visit.service';
 
 @Component({
   selector: 'app-settings',
@@ -18,7 +17,6 @@ export class SettingsComponent {
   private habitService = inject(HabitService);
   private dialogService = inject(DialogService);
   private importService = inject(ImportService);
-  private firstVisitService = inject(FirstVisitService);
 
   // Dialog states
   protected readonly showLoadSampleDialog = signal(false);
@@ -159,7 +157,7 @@ export class SettingsComponent {
   }
 
   protected resetFirstVisit(): void {
-    this.firstVisitService.resetFirstVisit();
-    this.dialogService.showSuccess('First visit status reset. You will see the marketing page on next visit.');
+    // No longer needed with authentication
+    this.dialogService.showSuccess('Feature no longer needed with authentication.');
   }
 }
