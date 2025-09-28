@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ReminderModalComponent } from './reminder-modal.component';
@@ -16,14 +17,15 @@ describe('ReminderModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection()],
       imports: [ReminderModalComponent, FormsModule]
     })
     .compileComponents();
 
     fixture = TestBed.createComponent(ReminderModalComponent);
     component = fixture.componentInstance;
-    component.habitTitle.set('Test Habit');
-    component.habitId.set('1');
+    component.habitTitle = 'Test Habit';
+    component.habitId = '1';
     component.existingReminder = mockReminder;
     fixture.detectChanges();
   });

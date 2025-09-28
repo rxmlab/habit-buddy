@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
 import { CalendarComponent } from './calendar.component';
@@ -20,6 +22,8 @@ describe('CalendarComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CalendarComponent],
       providers: [
+        provideZonelessChangeDetection(),
+        { provide: ActivatedRoute, useValue: { snapshot: { url: [] }, queryParams: of({}) } },
         { provide: HabitService, useValue: habitServiceSpy },
         { provide: NotificationService, useValue: notificationServiceSpy }
       ]
@@ -38,19 +42,19 @@ describe('CalendarComponent', () => {
   });
 
   it('should navigate to previous month', () => {
-    const initialMonth = component.calendarMonth();
-    component.previousMonth();
-    expect(component.calendarMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
+    const initialMonth = (component as any).calendarMonth();
+    (component as any).previousMonth();
+    expect((component as any).calendarMonth()).toBe(initialMonth === 0 ? 11 : initialMonth - 1);
   });
 
   it('should navigate to next month', () => {
-    const initialMonth = component.calendarMonth();
-    component.nextMonth();
-    expect(component.calendarMonth()).toBe(initialMonth === 11 ? 0 : initialMonth + 1);
+    const initialMonth = (component as any).calendarMonth();
+    (component as any).nextMonth();
+    expect((component as any).calendarMonth()).toBe(initialMonth === 11 ? 0 : initialMonth + 1);
   });
 
   it('should set calendar mode', () => {
-    component.setCalendarMode('test-habit-id');
-    expect(component.calendarMode()).toBe('test-habit-id');
+    (component as any).setCalendarMode('test-habit-id');
+    expect((component as any).calendarMode()).toBe('test-habit-id');
   });
 });

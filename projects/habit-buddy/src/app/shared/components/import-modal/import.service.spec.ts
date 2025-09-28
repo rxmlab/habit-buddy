@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ImportService } from './import.service';
 import { HabitService } from '../../services/habit.service';
 import { Habit } from '../../models/habit.model';
@@ -50,6 +51,7 @@ describe('ImportService', () => {
 
     TestBed.configureTestingModule({
       providers: [
+        provideZonelessChangeDetection(),
         ImportService,
         { provide: HabitService, useValue: habitServiceSpy }
       ]
@@ -88,7 +90,7 @@ describe('ImportService', () => {
       const result = service.importHabits('invalid json');
 
       expect(result.success).toBe(false);
-      expect(result.message).toContain('Failed to parse JSON');
+      expect(result.message).toContain('Invalid JSON format');
     });
 
     it('should handle invalid data structure', () => {

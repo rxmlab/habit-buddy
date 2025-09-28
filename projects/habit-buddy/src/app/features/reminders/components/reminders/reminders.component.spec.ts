@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { of } from 'rxjs';
 
 import { RemindersComponent } from './reminders.component';
@@ -22,6 +23,7 @@ describe('RemindersComponent', () => {
     await TestBed.configureTestingModule({
       imports: [RemindersComponent],
       providers: [
+        provideZonelessChangeDetection(),
         { provide: HabitService, useValue: habitServiceSpy },
         { provide: NotificationService, useValue: notificationServiceSpy }
       ]
@@ -40,13 +42,13 @@ describe('RemindersComponent', () => {
   });
 
   it('should display empty state when no reminders', () => {
-    const emptyState = fixture.debugElement.nativeElement.querySelector('.p-4.text-slate-400');
+    const emptyState = fixture.debugElement.nativeElement.querySelector('p.text-slate-600');
     expect(emptyState.textContent).toContain('No reminders set');
   });
 
   it('should get days text correctly', () => {
     const days = [1, 2, 3, 4, 5];
-    const result = component.getDaysText(days);
-    expect(result).toBe('Mon, Tue, Wed, Thu, Fri');
+    const result = (component as any).getDaysText(days);
+    expect(result).toBe('Mon,Tue,Wed,Thu,Fri');
   });
 });

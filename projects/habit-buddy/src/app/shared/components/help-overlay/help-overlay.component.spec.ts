@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
 
 import { HelpOverlayComponent } from './help-overlay.component';
 
@@ -8,6 +9,7 @@ describe('HelpOverlayComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection()],
       imports: [HelpOverlayComponent]
     })
     .compileComponents();

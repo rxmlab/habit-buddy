@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { of } from 'rxjs';
 
 import { StatsComponent } from './stats.component';
@@ -27,6 +28,7 @@ describe('StatsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [StatsComponent],
       providers: [
+        provideZonelessChangeDetection(),
         { provide: HabitService, useValue: habitServiceSpy },
         { provide: NotificationService, useValue: notificationServiceSpy }
       ]
