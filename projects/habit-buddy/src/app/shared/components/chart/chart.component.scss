@@ -2,12 +2,6 @@
 canvas {
   border-radius: 8px;
   max-width: 100%;
-  height: auto;
-}
-
-// Responsive chart
-@media (max-width: 768px) {
-  canvas {
-    height: 120px !important;
-  }
+  height: 100% !important; // Ensure canvas fills container
+  display: block; // Remove any default inline spacing
 }

@@ -201,7 +201,7 @@ export class GoalsComponent implements OnInit, OnDestroy {
   protected async onCheckin(habitId: string): Promise<void> {
     const result = await this.habitService.toggleCheckinToday(habitId);
     if (result.success) {
-      this.notificationService.playBell();
+      this.notificationService.playSuccessSound(); // Use celebratory success sound for check-ins
       this.notificationService.triggerConfetti();
     } else if (result.message) {
       this.dialogService.showError(result.message);

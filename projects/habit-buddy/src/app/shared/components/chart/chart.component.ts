@@ -81,9 +81,37 @@ export class ChartComponent implements OnInit, AfterViewInit, OnDestroy, OnChang
           options: {
             responsive: true,
             maintainAspectRatio: false,
+            layout: {
+              padding: {
+                top: 10,
+                bottom: 5, // Reduce bottom padding
+                left: 5,
+                right: 5
+              }
+            },
             scales: {
               y: {
-                beginAtZero: true
+                beginAtZero: true,
+                grid: {
+                  display: true,
+                  drawBorder: false
+                },
+                ticks: {
+                  padding: 5 // Reduce tick padding
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  padding: 5 // Reduce tick padding
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                display: false // Hide legend to save space
               }
             }
           }
