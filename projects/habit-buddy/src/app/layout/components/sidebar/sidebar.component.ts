@@ -1,7 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterModule, Router } from '@angular/router';
-import { LucideAngularModule, Home, Calendar, BarChart3, Clock, Settings, LogOut } from 'lucide-angular';
+import {
+  LucideAngularModule,
+  Home,
+  Calendar,
+  BarChart3,
+  Clock,
+  Settings,
+  LogOut,
+} from 'lucide-angular';
 import { AuthService } from '../../../shared/services/auth.service';
 
 @Component({
@@ -9,9 +17,9 @@ import { AuthService } from '../../../shared/services/auth.service';
   standalone: true,
   imports: [CommonModule, RouterModule, LucideAngularModule],
   templateUrl: './sidebar.component.html',
-  styleUrl: './sidebar.component.scss'
+  styleUrl: './sidebar.component.scss',
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
 
@@ -22,6 +30,14 @@ export class SidebarComponent {
   protected readonly ClockIcon = Clock;
   protected readonly SettingsIcon = Settings;
   protected readonly LogOutIcon = LogOut;
+
+  protected readonly isAuthenticated = signal(false);
+
+  ngOnInit(): void {
+    this.authService.authUser$.subscribe((user) => {
+      this.isAuthenticated.set(this.authService.isAuthenticated());
+    });
+  }
 
   async logout(): Promise<void> {
     try {

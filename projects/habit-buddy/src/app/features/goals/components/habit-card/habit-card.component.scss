@@ -88,11 +88,6 @@
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
   }
-  
-  // Tooltip styles are now handled by global Bootstrap-style tooltips
-  // See: src/app/shared/styles/tooltips.scss
-  
-  // Tooltip arrow styles are now handled by global Bootstrap-style tooltips
 }
 
 // Tooltip animations are now handled by global Bootstrap-style tooltips
@@ -112,7 +107,8 @@
 }
 
 .stat-item {
-  text-align: left;
+  text-align: center;
+
 }
 
 // Stats row for side-by-side layout
@@ -122,11 +118,6 @@
   justify-content: space-between;
   align-items: center;
   position: relative;
-}
-
-.stats-row .stat-item {
-  flex: 1;
-  text-align: center;
 }
 
 // Connection indicator between streak and total days

@@ -62,6 +62,8 @@ export class HabitCardComponent {
     return new Date(habit.createdAt);
   });
 
+  constructor(){}
+
   // Format created date for display
   protected getFormattedCreatedDate(): string {
     const createdDate = this.goalCreatedDate();

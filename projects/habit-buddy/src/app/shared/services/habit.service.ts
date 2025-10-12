@@ -1,10 +1,10 @@
-import { computed, Injectable, signal, inject } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { Habit, HabitStats, Reminder, WeeklyTrend, MonthlyTrend, YearlyTrend, HabitBadge, BadgeLevel } from '../models/habit.model';
-import { TimezoneService } from './timezone.service';
+import { getBadgeConfigForDays } from '../config/badge-levels.config';
+import { Habit, HabitBadge, HabitStats, MonthlyTrend, Reminder, WeeklyTrend, YearlyTrend } from '../models/habit.model';
 import { ApiService } from './api.service';
-import { BADGE_LEVELS, getBadgeConfigForDays, calculateProgressToNextLevel } from '../config/badge-levels.config';
+import { TimezoneService } from './timezone.service';
 
 @Injectable({
   providedIn: 'root'
