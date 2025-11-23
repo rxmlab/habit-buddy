@@ -13,12 +13,53 @@
       <p class="brand-tagline">Build Better Habits</p>
     </div>
   </div>
-  <div class="header-actions">
-    <button 
-      (click)="logout()"
-      class="logout-btn"
-      title="Logout">
-      <lucide-icon [img]="LogOutIcon" size="20"></lucide-icon>
-    </button>
+  <div class="header-actions relative">
+    @if (user()) {
+      <!-- User Avatar - Clickable to toggle dropdown -->
+      <button 
+        (click)="toggleDropdown()"
+        class="relative group focus:outline-none">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-sm font-bold shadow-md hover:scale-105 transition-transform">
+          {{ getUserInitials() }}
+        </div>
+      </button>
+
+      <!-- Dropdown Menu -->
+      @if (isDropdownOpen()) {
+        <!-- Backdrop to close dropdown -->
+        <div 
+          class="fixed inset-0 z-40"
+          (click)="closeDropdown()">
+        </div>
+        
+        <!-- Dropdown Content -->
+        <div class="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+          <!-- User Info Section -->
+          <div class="p-4 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border-b border-gray-200">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold shrink-0 shadow-md">
+                {{ getUserInitials() }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-gray-900 truncate text-sm">
+                  {{ user()?.displayName || 'User' }}
+                </div>
+                <div class="text-xs text-gray-600 truncate">
+                  <span class="truncate">{{ user()?.email }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Logout Button -->
+          <button
+            (click)="logout()"
+            class="w-full flex items-center gap-2 px-4 py-3 text-left text-red-600 hover:bg-red-50 transition-colors">
+            <lucide-icon [img]="LogOutIcon" size="18"></lucide-icon>
+            <span class="font-medium">Logout</span>
+          </button>
+        </div>
+      }
+    }
   </div>
 </header>

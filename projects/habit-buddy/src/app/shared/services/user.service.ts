@@ -1,19 +1,19 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal, Signal } from '@angular/core';
 import { AuthUser } from '../interfaces/user.interface';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private _user: AuthUser | null = null;
+  private _user = signal<AuthUser | null>(null);
 
   constructor() { }
 
-  getUser(): AuthUser | null {
-    return this._user;
+  getUser(): Signal<AuthUser | null> {
+    return this._user.asReadonly();
   }
 
   setUser(user: AuthUser | null): void {
-    this._user = user;
+    this._user.set(user);
   }
 }

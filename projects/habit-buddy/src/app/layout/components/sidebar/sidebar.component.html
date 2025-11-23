@@ -17,6 +17,28 @@
     <div class="brand-features">Reminders • Anti-cheat • Cross-device ready</div>
   </div>
 
+  <!-- User Profile Card -->
+  @if (user()) {
+  <div class="mb-4 p-3 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl border border-indigo-100 shadow-sm">
+    <div class="flex items-start gap-3">
+      <!-- Avatar with gradient -->
+      <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-md">
+        {{ getUserInitials() }}
+      </div>
+      
+      <!-- User Info -->
+      <div class="flex-1 min-w-0">
+        <h3 class="font-semibold text-gray-900 truncate text-sm">
+          {{ user()?.displayName || 'User' }}
+        </h3>
+        <div class="text-xs text-gray-600 truncate flex items-center gap-1 mt-0.5">
+          <span class="truncate">{{ user()?.email }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
   <nav class="flex-1 flex flex-col space-y-2">
     <a
       routerLink="/goals"
