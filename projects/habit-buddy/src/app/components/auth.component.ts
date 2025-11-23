@@ -5,7 +5,8 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { LucideAngularModule, Mail, Lock, Eye, EyeOff, LogIn, UserPlus } from 'lucide-angular';
 
-import { AuthService, AuthUser } from '../shared/services/auth.service';
+import { AuthService } from '../shared/services/auth.service';
+import { AuthUser } from '../shared/interfaces/user.interface';
 
 @Component({
   selector: 'app-auth',

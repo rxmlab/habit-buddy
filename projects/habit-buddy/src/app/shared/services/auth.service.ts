@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { UserService } from './user.service';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { 
   signInWithEmailAndPassword, 
@@ -10,12 +11,9 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { auth } from '../../../firebase.config';
+import { AuthUser } from '../interfaces/user.interface';
 
-export interface AuthUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-}
+
 
 @Injectable({
   providedIn: 'root'
@@ -27,17 +25,25 @@ export class AuthService {
   private isLoadingSubject = new BehaviorSubject<boolean>(false);
   public isLoading$ = this.isLoadingSubject.asObservable();
 
+  private userService = inject(UserService);
+  
+  // Current Firebase ID token
+  private currentToken: string | null = null;
+
   constructor() {
     // Listen to Firebase auth state changes
-    onAuthStateChanged(auth, (user: User | null) => {
+    onAuthStateChanged(auth, async (user: User | null) => {
+      console.log('Auth state changed:', user);
       if (user) {
-        this.authUserSubject.next({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName
-        });
+        const authUser = this.mapFirebaseUserToAuthUser(user);
+        this.authUserSubject.next(authUser);
+        this.userService.setUser(authUser);
+        // Cache the token
+        this.currentToken = await user.getIdToken();
       } else {
         this.authUserSubject.next(null);
+        this.userService.setUser(null);
+        this.currentToken = null;
       }
       this.isLoadingSubject.next(false);
     });
@@ -48,12 +54,9 @@ export class AuthService {
     try {
       this.isLoadingSubject.next(true);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      return {
-        uid: userCredential.user.uid,
-        email: userCredential.user.email,
-        displayName: userCredential.user.displayName
-      };
+      // Immediately get and cache token
+      this.currentToken = await userCredential.user.getIdToken();
+      return this.mapFirebaseUserToAuthUser(userCredential.user);
     } catch (error) {
       this.isLoadingSubject.next(false);
       throw this.handleAuthError(error);
@@ -65,12 +68,9 @@ export class AuthService {
     try {
       this.isLoadingSubject.next(true);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      return {
-        uid: userCredential.user.uid,
-        email: userCredential.user.email,
-        displayName: userCredential.user.displayName
-      };
+      // Immediately get and cache token
+      this.currentToken = await userCredential.user.getIdToken();
+      return this.mapFirebaseUserToAuthUser(userCredential.user);
     } catch (error) {
       this.isLoadingSubject.next(false);
       throw this.handleAuthError(error);
@@ -83,12 +83,9 @@ export class AuthService {
       this.isLoadingSubject.next(true);
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      
-      return {
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName
-      };
+      // Immediately get and cache token
+      this.currentToken = await result.user.getIdToken();
+      return this.mapFirebaseUserToAuthUser(result.user);
     } catch (error) {
       this.isLoadingSubject.next(false);
       throw this.handleAuthError(error);
@@ -121,11 +118,18 @@ export class AuthService {
     return auth.currentUser;
   }
 
-  // Get ID token
+  // Get cached ID token (synchronous) - called by interceptor
+  getCachedToken(): string | null {
+    return this.currentToken;
+  }
+
+  // Get ID token (async - fetches fresh token)
   async getIdToken(): Promise<string | null> {
     const user = auth.currentUser;
     if (user) {
-      return await user.getIdToken();
+      const token = await user.getIdToken();
+      this.currentToken = token; // Update cache
+      return token;
     }
     return null;
   }
@@ -134,9 +138,21 @@ export class AuthService {
   async refreshIdToken(): Promise<string | null> {
     const user = auth.currentUser;
     if (user) {
-      return await user.getIdToken(true);
+      const token = await user.getIdToken(true);
+      this.currentToken = token; // Update cache
+      return token;
     }
     return null;
+  }
+
+  // Map Firebase User to AuthUser
+  private mapFirebaseUserToAuthUser(user: User): AuthUser {
+    return {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      emailVerified: user.emailVerified
+    };
   }
 
   // Error handling

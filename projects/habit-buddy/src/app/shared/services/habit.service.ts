@@ -4,6 +4,8 @@ import { tap } from 'rxjs/operators';
 import { getBadgeConfigForDays } from '../config/badge-levels.config';
 import { Habit, HabitBadge, HabitStats, MonthlyTrend, Reminder, WeeklyTrend, YearlyTrend } from '../models/habit.model';
 import { ApiService } from './api.service';
+import { AuthService } from './auth.service';
+import { AuthUser } from '../interfaces/user.interface';
 import { TimezoneService } from './timezone.service';
 
 @Injectable({
@@ -14,6 +16,7 @@ export class HabitService {
   private readonly DEFAULT_WINDOW_MIN = 120;
   private timezoneService = inject(TimezoneService);
   private apiService = inject(ApiService);
+  private authService = inject(AuthService);
 
   private habitsSubject = new BehaviorSubject<Habit[]>([]);
   public habits$ = this.habitsSubject.asObservable();
@@ -124,8 +127,10 @@ export class HabitService {
     });
 
     // Load habits from backend when user authenticates
-    this.apiService.authUser$.subscribe(user => {
+    this.authService.authUser$.subscribe(async (user: AuthUser | null) => {
       if (user) {
+        // Wait a bit to ensure token is cached
+        await new Promise(resolve => setTimeout(resolve, 100));
         this.loadHabitsFromBackend();
       } else {
         this.habitsSubject.next([]);
