@@ -41,3 +41,10 @@ testem.log
 .DS_Store
 Thumbs.db
 .vercel
+
+# Python
+venv/
+backend/venv/
+__pycache__/
+*.py[cod]
+.env
