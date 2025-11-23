@@ -49,14 +49,14 @@ class HabitCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     days_target: int = Field(..., ge=1, le=1000)
     category_id: Optional[str] = None
-    color: str = Field(..., regex=r'^#[0-9A-Fa-f]{6}$')
+    color: str = Field(..., pattern=r'^#[0-9A-Fa-f]{6}$')
     reminder: Optional[Reminder] = None
 
 class HabitUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=100)
     days_target: Optional[int] = Field(None, ge=1, le=1000)
     category_id: Optional[str] = None
-    color: Optional[str] = Field(None, regex=r'^#[0-9A-Fa-f]{6}$')
+    color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
     reminder: Optional[Reminder] = None
 
 class HabitResponse(BaseModel):
