@@ -215,21 +215,6 @@ habit-buddy/
 1. **Local Development** - `ng serve` for frontend
 2. **Firebase Emulators** - Test locally
 3. **Build & Test** - `npm run build`
-4. **Deploy Frontend** - `firebase deploy --only hosting`
-5. **Deploy Backend** - `vercel --prod`
-
-## 📖 Additional Documentation
-
-- `FIREBASE_SETUP_COMPLETE.md` - Firebase configuration
-- `DEPLOYMENT_SUCCESS.md` - Deployment details
-- `API_SCHEMA_ANALYSIS.md` - API structure
-- `FIREBASE_BACKEND_COMPLETE.md` - Backend integration
-
-## ⚠️ Important Notes
-
-1. **Authentication Required** - Users must login to access app features
-2. **User Data Isolation** - Each user's habits are private
-3. **PWA Optimized** - Works offline and installable
 4. **Firebase Free Tier** - Optimized for free tier usage
 5. **Real-time Updates** - Live data synchronization
 
