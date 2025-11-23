@@ -1,16 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal, ViewChild, inject, computed, OnDestroy } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { HabitCardComponent } from '../habit-card/habit-card.component';
-import { HabitFormComponent } from '../habit-form/habit-form.component';
+import { Bell, CheckCircle, ChevronDown, Crown, Filter, Flame, Grid3X3, LucideAngularModule, Plus, Sparkles, Sprout, Star, Target, Trophy } from 'lucide-angular';
+import { BADGE_LEVELS, getBadgeConfigForDays } from '../../../../shared/config/badge-levels.config';
+import { BadgeLevel, Habit, Reminder } from '../../../../shared/models/habit.model';
 import { DialogService } from '../../../../shared/services/dialog.service';
-import { Habit, Reminder, BadgeLevel } from '../../../../shared/models/habit.model';
 import { HabitService } from '../../../../shared/services/habit.service';
 import { NotificationService } from '../../../../shared/services/notification.service';
 import { ReminderModalComponent } from '../../../reminders/components/reminder-modal/reminder-modal.component';
-import { LucideAngularModule, Grid3X3, Sprout, Target, Star, Trophy, Crown, Flame, Bell, Sparkles, CheckCircle, ChevronDown, Filter, Info, ArrowRight, Plus } from 'lucide-angular';
-import { getBadgeFilterOptions, BADGE_LEVELS, getBadgeConfigForDays } from '../../../../shared/config/badge-levels.config';
+import { HabitCardComponent } from '../habit-card/habit-card.component';
+import { HabitFormComponent } from '../habit-form/habit-form.component';
 
 @Component({
   selector: 'app-goals',
