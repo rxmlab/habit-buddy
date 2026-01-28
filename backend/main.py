@@ -1,172 +1,82 @@
 import functions_framework
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import firebase_admin
-from firebase_admin import credentials, auth
 import os
 from dotenv import load_dotenv
-from typing import List, Optional
-import datetime
 
 # Load environment variables
 load_dotenv()
 
-# Configuration
-APP_MODE = os.getenv("APP_MODE", "production")  # 'production' or 'mock'
+# Configuration - PROD_MODE=false means dev mode (like Angular's production: false)
+# PROD_MODE=true means production mode
+PROD_MODE = os.getenv("PROD_MODE", "false").lower() == "true"
+DEV_MODE = not PROD_MODE
 
 # Initialize FastAPI app
 app = FastAPI(
     title="HabitBuddy API",
-    description=f"Backend API for HabitBuddy ({APP_MODE} mode)",
+    description="Backend API for HabitBuddy",
     version="1.0.0"
 )
 
 # Configure CORS
+# Get allowed origins from env, default to ["*"] for easier local dev if not set
+pass
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
+if allowed_origins_env:
+    allowed_origins = allowed_origins_env.split(",")
+else:
+    allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:4200",
-        "https://habit-buddy.web.app",
-        "https://habit-buddy.firebaseapp.com",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- MOCK DATA STORE ---
-MOCK_HABITS = [
-    {
-        "id": "1",
-        "title": "Morning Exercise",
-        "days_target": 30,
-        "color": "#3b82f6",
-        "created_at": "2024-01-01T00:00:00Z",
-        "check_ins": {
-            "2024-01-01": "hash1",
-            "2024-01-02": "hash2"
-        },
-        "reminder": {
-            "time": "07:00",
-            "days": [1, 2, 3, 4, 5],
-            "window": 30
-        },
-        "badge": {
-            "level": "beginner",
-            "name": "Beginner",
-            "description": "Completed 21+ days",
-            "icon": "🌿",
-            "days_required": 21
-        }
-    },
-    {
-        "id": "2",
-        "title": "Read 30 Minutes",
-        "days_target": 50,
-        "color": "#10b981",
-        "created_at": "2024-01-01T00:00:00Z",
-        "check_ins": {
-            "2024-01-01": "hash3"
-        },
-        "reminder": None,
-        "badge": None
-    }
-]
-
-# --- DEPENDENCIES ---
-
-async def get_current_user_mock(request: Request):
-    """Mock user for development"""
-    return {
-        "uid": "mock-user-id",
-        "email": "mock@example.com",
-        "name": "Mock User"
-    }
-
-if APP_MODE == "mock":
-    print("⚠️ RUNNING IN MOCK MODE")
-    get_current_user = get_current_user_mock
-else:
-    # Initialize Firebase Admin SDK
-    if not firebase_admin._apps:
+# Initialize Firebase Admin SDK
+if not firebase_admin._apps:
+    try:
         firebase_admin.initialize_app()
-    
-    # Import database and create tables
-    from app.database import engine, Base
-    Base.metadata.create_all(bind=engine)
-    
-    # Import real auth dependency
-    from app.routers.auth import get_current_user
+        if DEV_MODE:
+            print(" Running in DEV MODE - PostgreSQL database, auth tokens required")
+        else:
+            print(" Running in PRODUCTION MODE - PostgreSQL database, auth tokens required")
+    except Exception as e:
+        if DEV_MODE:
+            print(f" Firebase initialization failed in dev mode: {e}")
+            print("   Continuing - auth tokens will still be required")
+        else:
+            raise
+
+# Import database and create tables
+from app.database import engine, Base
+Base.metadata.create_all(bind=engine)
+
+# Import auth dependency
+from app.routers.auth import get_current_user
 
 # --- ROUTERS ---
 
-if APP_MODE == "mock":
-    # Mock Endpoints
-    @app.get("/api/habits")
-    async def get_habits_mock():
-        return MOCK_HABITS
+from app.routers import habits, auth as auth_router, stats, reminders
 
-    @app.post("/api/habits")
-    async def create_habit_mock(habit_data: dict):
-        new_habit = {
-            "id": str(len(MOCK_HABITS) + 1),
-            "title": habit_data.get("title", "New Habit"),
-            "days_target": habit_data.get("days_target", 30),
-            "color": habit_data.get("color", "#3b82f6"),
-            "created_at": datetime.datetime.utcnow().isoformat(),
-            "check_ins": {},
-            "reminder": habit_data.get("reminder"),
-            "badge": None
-        }
-        MOCK_HABITS.append(new_habit)
-        return new_habit
-
-    @app.post("/api/habits/{habit_id}/check-in")
-    async def check_in_habit_mock(habit_id: str):
-        for habit in MOCK_HABITS:
-            if habit["id"] == habit_id:
-                today = datetime.datetime.now().strftime("%Y-%m-%d")
-                habit["check_ins"][today] = f"hash_{today}"
-                return {"message": "Check-in added successfully", "date": today}
-        return {"error": "Habit not found"}, 404
-        
-    @app.get("/api/stats/overview")
-    async def get_overview_stats_mock():
-        return {
-            "total_completed": 3,
-            "average_completion": 75.5,
-            "best_current_streak": 5,
-            "best_longest_streak": 10,
-            "habits_count": len(MOCK_HABITS)
-        }
-        
-    @app.get("/api/auth/me")
-    async def get_me_mock():
-        return {
-            "id": "mock-user-id",
-            "email": "mock@example.com",
-            "display_name": "Mock User",
-            "created_at": "2024-01-01T00:00:00Z"
-        }
-
-else:
-    # Production Routers
-    from app.routers import habits, auth as auth_router, stats, reminders
-    
-    app.include_router(auth_router.router, prefix="/api/auth", tags=["authentication"])
-    app.include_router(habits.router, prefix="/api/habits", tags=["habits"], dependencies=[Depends(get_current_user)])
-    app.include_router(stats.router, prefix="/api/stats", tags=["statistics"], dependencies=[Depends(get_current_user)])
-    app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"], dependencies=[Depends(get_current_user)])
+app.include_router(auth_router.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(habits.router, prefix="/api/habits", tags=["habits"], dependencies=[Depends(get_current_user)])
+app.include_router(stats.router, prefix="/api/stats", tags=["statistics"], dependencies=[Depends(get_current_user)])
+app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"], dependencies=[Depends(get_current_user)])
 
 # --- COMMON ENDPOINTS ---
 
 @app.get("/")
 async def root():
-    return {"message": "HabitBuddy API is running", "version": "1.0.0", "mode": APP_MODE}
+    return {"message": "HabitBuddy API is running", "version": "1.0.0"}
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "habitbuddy-api", "mode": APP_MODE}
+    return {"status": "healthy", "service": "habitbuddy-api"}
 
 # --- FIREBASE FUNCTIONS ---
 
@@ -206,5 +116,5 @@ def api(request):
 
 if __name__ == "__main__":
     import uvicorn
-    print(f"Starting HabitBuddy API in {APP_MODE} mode...")
+    print("Starting HabitBuddy API...")
     uvicorn.run(app, host="0.0.0.0", port=8000)

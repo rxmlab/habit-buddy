@@ -44,7 +44,7 @@ def generate_check_in_hash(habit_id: str, date: str) -> str:
     """Generate a hash for check-in verification"""
     return hashlib.md5(f"{habit_id}_{date}".encode()).hexdigest()
 
-@router.get("/", response_model=List[HabitResponse])
+@router.get("", response_model=List[HabitResponse])
 async def get_habits(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
@@ -89,7 +89,7 @@ async def get_habits(
     
     return result
 
-@router.post("/", response_model=HabitResponse)
+@router.post("", response_model=HabitResponse)
 async def create_habit(
     habit_data: HabitCreate,
     db: Session = Depends(get_db),

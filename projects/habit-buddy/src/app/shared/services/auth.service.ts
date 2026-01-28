@@ -1,6 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, isDevMode } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { UserService } from './user.service';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -12,8 +13,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../../../firebase.config';
 import { AuthUser } from '../interfaces/user.interface';
-
-
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -26,35 +26,63 @@ export class AuthService {
   public isLoading$ = this.isLoadingSubject.asObservable();
 
   private userService = inject(UserService);
+  private http = inject(HttpClient);
   
-  // Current Firebase ID token
+  // Current ID token
   private currentToken: string | null = null;
+  private readonly API_URL = `${environment.apiUrl}/api/auth`;
 
   constructor() {
-    // Listen to Firebase auth state changes
+    // 1. Check for local dev session (Native Auth)
+    if (isDevMode()) {
+        const token = localStorage.getItem('access_token');
+        const userStr = localStorage.getItem('user');
+        if (token && userStr) {
+            this.currentToken = token;
+            const user = JSON.parse(userStr);
+            this.authUserSubject.next(user);
+            this.userService.setUser(user);
+        }
+    }
+
+    // 2. Listen to Firebase auth state changes (Prod / Firebase Mode)
     onAuthStateChanged(auth, async (user: User | null) => {
+      // If we are in dev mode and have a local token, ignore Firebase updates to avoid conflicts
+      if (isDevMode() && this.currentToken) return;
+
       console.log('Auth state changed:', user);
       if (user) {
         const authUser = this.mapFirebaseUserToAuthUser(user);
         this.authUserSubject.next(authUser);
         this.userService.setUser(authUser);
-        // Cache the token
         this.currentToken = await user.getIdToken();
       } else {
-        this.authUserSubject.next(null);
-        this.userService.setUser(null);
-        this.currentToken = null;
+        // Only clear if NOT using local auth
+        if (!isDevMode() || !localStorage.getItem('access_token')) {
+            this.authUserSubject.next(null);
+            this.userService.setUser(null);
+            this.currentToken = null;
+        }
       }
       this.isLoadingSubject.next(false);
     });
   }
 
-  // Sign in with email and password
+  // Sign in
   async signIn(email: string, password: string): Promise<AuthUser> {
     try {
       this.isLoadingSubject.next(true);
+      
+      if (isDevMode()) {
+        // Native Login
+        const response = await firstValueFrom(
+            this.http.post<{ access_token: string, user: any }>(`${this.API_URL}/login`, { email, password })
+        );
+        return this.handleLocalAuthSuccess(response);
+      }
+
+      // Firebase Login
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // Immediately get and cache token
       this.currentToken = await userCredential.user.getIdToken();
       return this.mapFirebaseUserToAuthUser(userCredential.user);
     } catch (error) {
@@ -63,14 +91,24 @@ export class AuthService {
     }
   }
 
-  // Sign up with email and password
+  // Sign up
   async signUp(email: string, password: string): Promise<AuthUser> {
     try {
       this.isLoadingSubject.next(true);
+
+      if (isDevMode()) {
+        // Native Signup
+        const response = await firstValueFrom(
+            this.http.post<{ access_token: string, user: any }>(`${this.API_URL}/signup`, { email, password })
+        );
+        return this.handleLocalAuthSuccess(response);
+      }
+
+      // Firebase Signup
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Immediately get and cache token
       this.currentToken = await userCredential.user.getIdToken();
       return this.mapFirebaseUserToAuthUser(userCredential.user);
+
     } catch (error) {
       this.isLoadingSubject.next(false);
       throw this.handleAuthError(error);
@@ -81,9 +119,13 @@ export class AuthService {
   async signInWithGoogle(): Promise<AuthUser> {
     try {
       this.isLoadingSubject.next(true);
+
+      if (isDevMode()) {
+        throw new Error("Google Sign-In is not supported in local dev mode. Please use Email/Password.");
+      }
+
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      // Immediately get and cache token
       this.currentToken = await result.user.getIdToken();
       return this.mapFirebaseUserToAuthUser(result.user);
     } catch (error) {
@@ -96,11 +138,47 @@ export class AuthService {
   async signOut(): Promise<void> {
     try {
       this.isLoadingSubject.next(true);
+      
+      if (isDevMode()) {
+          this.clearLocalSession();
+          this.isLoadingSubject.next(false);
+          return;
+      }
+
       await signOut(auth);
     } catch (error) {
       this.isLoadingSubject.next(false);
       throw this.handleAuthError(error);
     }
+  }
+
+  // Helper for Local Auth
+  private handleLocalAuthSuccess(response: { access_token: string, user: any }): AuthUser {
+      const authUser: AuthUser = {
+          uid: response.user.uid,
+          email: response.user.email,
+          displayName: response.user.displayName,
+          emailVerified: true
+      };
+      
+      this.currentToken = response.access_token;
+      this.authUserSubject.next(authUser);
+      this.userService.setUser(authUser);
+      
+      // Persist session
+      localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('user', JSON.stringify(authUser));
+      
+      this.isLoadingSubject.next(false);
+      return authUser;
+  }
+
+  private clearLocalSession() {
+      this.authUserSubject.next(null);
+      this.userService.setUser(null);
+      this.currentToken = null;
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
   }
 
   // Get current user
@@ -125,6 +203,9 @@ export class AuthService {
 
   // Get ID token (async - fetches fresh token)
   async getIdToken(): Promise<string | null> {
+    if (isDevMode() && this.currentToken) {
+        return this.currentToken;
+    }
     const user = auth.currentUser;
     if (user) {
       const token = await user.getIdToken();
@@ -136,6 +217,9 @@ export class AuthService {
 
   // Refresh ID token
   async refreshIdToken(): Promise<string | null> {
+    if (isDevMode() && this.currentToken) {
+        return this.currentToken;
+    }
     const user = auth.currentUser;
     if (user) {
       const token = await user.getIdToken(true);
@@ -158,6 +242,11 @@ export class AuthService {
   // Error handling
   private handleAuthError(error: any): Error {
     let message = 'An error occurred during authentication';
+    
+    // Check if it's an HTTP error from our local API
+    if (error.error && error.error.detail) {
+        return new Error(error.error.detail);
+    }
     
     if (error.code) {
       switch (error.code) {

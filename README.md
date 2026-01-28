@@ -68,14 +68,25 @@ npm install -g firebase-tools vercel
 6. Set project: `firebase use your-project-id`
 
 ### Local Development
-```bash
-# Start frontend development server
-ng serve
 
-# Start backend API (optional - using Firestore directly)
-cd vercel-backend
-python main.py
-```
+1. **Start Backend (Native Auth Support)**
+   ```bash
+   cd backend
+   # Install dependencies (first time only)
+   pip install -r requirements.txt
+   # Start server
+   venv\Scripts\python.exe main.py
+   ```
+
+2. **Start Frontend (with Proxy)**
+   ```bash
+   # Starts Angular with proxy to backend
+   npm start
+   ```
+
+   - Frontend: http://localhost:4200
+   - Backend: http://localhost:8000
+   - **Native Auth**: Sign up/Login uses local PostgreSQL database (bypasses Firebase).
 
 ### Production Deployment
 ```bash

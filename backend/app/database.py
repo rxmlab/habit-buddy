@@ -7,15 +7,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database URL - Use PostgreSQL for production, SQLite for development
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./habitbuddy.db")
+# Database URL - PostgreSQL is required for this project.
+# Expect an environment variable DATABASE_URL like:
+# postgresql://username:password@host:port/database_name
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL is not set. HabitBuddy requires a PostgreSQL DATABASE_URL, e.g. 'postgresql://user:pass@localhost:5432/habitbuddy'"
+    )
 
-# For PostgreSQL on Firebase Functions, we'll use a connection string
-if DATABASE_URL.startswith("postgresql"):
-    engine = create_engine(DATABASE_URL)
-else:
-    # SQLite for local development
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+if not DATABASE_URL.startswith("postgresql"):
+    raise RuntimeError(
+        "DATABASE_URL must be a PostgreSQL URL (start with 'postgresql://'). Current value: %r" % DATABASE_URL
+    )
+
+# Create SQLAlchemy engine for PostgreSQL
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -27,6 +34,7 @@ class User(Base):
     id = Column(String, primary_key=True, index=True)  # Firebase UID
     email = Column(String, unique=True, index=True)
     display_name = Column(String, nullable=True)
+    hashed_password = Column(String, nullable=True)  # For native auth
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

@@ -10,7 +10,7 @@ from app.routers.auth import get_current_user
 
 router = APIRouter()
 
-@router.get("/", response_model=List[dict])
+@router.get("", response_model=List[dict])
 async def get_reminders(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
