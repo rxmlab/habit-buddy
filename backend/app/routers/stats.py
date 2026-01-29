@@ -10,6 +10,9 @@ from app.routers.auth import get_current_user
 
 router = APIRouter()
 
+def get_date_from_ts(ts: int) -> datetime:
+    return datetime.fromtimestamp(ts / 1000)
+
 def calculate_streaks(check_ins: List[CheckIn]) -> dict:
     """Calculate current and longest streaks"""
     if not check_ins:
@@ -25,11 +28,14 @@ def calculate_streaks(check_ins: List[CheckIn]) -> dict:
     
     # Calculate streaks
     for i in range(1, len(sorted_check_ins)):
-        prev_date = sorted_check_ins[i-1].check_in_date.date()
-        curr_date = sorted_check_ins[i].check_in_date.date()
+        # Convert ms timestamp to date object
+        prev_date = get_date_from_ts(sorted_check_ins[i-1].check_in_date).date()
+        curr_date = get_date_from_ts(sorted_check_ins[i].check_in_date).date()
         
         if (curr_date - prev_date).days == 1:
             temp_streak += 1
+        elif (curr_date - prev_date).days == 0:
+            pass # Same day check-in, ignore for streak calculation
         else:
             longest_streak = max(longest_streak, temp_streak)
             if (curr_date - prev_date).days > 1:
@@ -42,13 +48,31 @@ def calculate_streaks(check_ins: List[CheckIn]) -> dict:
     today = datetime.utcnow().date()
     current_streak = 0
     
-    for check_in in reversed(sorted_check_ins):
-        check_date = check_in.check_in_date.date()
-        if check_date == today or check_date == today - timedelta(days=current_streak):
-            current_streak += 1
-            today = check_date
-        else:
-            break
+    # Check backwards from today/yesterday for active streak
+    # We need to map check-ins to unique dates first to simplify
+    check_dates = sorted({get_date_from_ts(ci.check_in_date).date() for ci in sorted_check_ins}, reverse=True)
+    
+    if not check_dates:
+        return {"current": 0, "longest": longest_streak, "total": len(check_ins), "breaks": breaks}
+
+    # If the last check-in is today or yesterday, streak is alive
+    if check_dates[0] == today:
+        current_streak = 1
+        streak_start_idx = 1
+    elif check_dates[0] == today - timedelta(days=1):
+        current_streak = 1
+        streak_start_idx = 1
+    else:
+        current_streak = 0
+        streak_start_idx = 0 # Loop won't add anything or logic below handles it
+    
+    if current_streak > 0:
+        for i in range(streak_start_idx, len(check_dates)):
+            expected_date = check_dates[i-1] - timedelta(days=1)
+            if check_dates[i] == expected_date:
+                current_streak += 1
+            else:
+                break
     
     return {
         "current": current_streak,
@@ -67,7 +91,7 @@ def calculate_weekly_trend(check_ins: List[CheckIn]) -> WeeklyTrend:
     
     for check_in in check_ins:
         # Get the start of the week (Monday)
-        check_date = check_in.check_in_date.date()
+        check_date = get_date_from_ts(check_in.check_in_date).date()
         week_start = check_date - timedelta(days=check_date.weekday())
         weekly_data[week_start] += 1
     
@@ -94,7 +118,7 @@ def calculate_monthly_trend(check_ins: List[CheckIn]) -> MonthlyTrend:
     monthly_data = defaultdict(int)
     
     for check_in in check_ins:
-        month_key = check_in.check_in_date.strftime("%Y-%m")
+        month_key = get_date_from_ts(check_in.check_in_date).strftime("%Y-%m")
         monthly_data[month_key] += 1
     
     # Get last 12 months
@@ -118,7 +142,7 @@ def calculate_yearly_trend(check_ins: List[CheckIn]) -> YearlyTrend:
     yearly_data = defaultdict(int)
     
     for check_in in check_ins:
-        year = check_in.check_in_date.year
+        year = get_date_from_ts(check_in.check_in_date).year
         yearly_data[year] += 1
     
     # Get last 5 years

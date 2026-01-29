@@ -239,7 +239,7 @@ export class NotificationService {
   async markHabitAsDone(habitId: string): Promise<void> {
     try {
       console.log('markHabitAsDone called for habit:', habitId);
-      const result = await this.habitService.toggleCheckinToday(habitId);
+      const result = await this.habitService.checkInToday(habitId);
       console.log('toggleCheckinToday result:', result);
       
       if (result.success) {

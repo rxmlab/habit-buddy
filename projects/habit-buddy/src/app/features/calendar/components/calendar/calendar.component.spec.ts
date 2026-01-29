@@ -14,7 +14,7 @@ describe('CalendarComponent', () => {
   let notificationService: jasmine.SpyObj<NotificationService>;
 
   beforeEach(async () => {
-    const habitServiceSpy = jasmine.createSpyObj('HabitService', ['toggleCheckinToday'], {
+    const habitServiceSpy = jasmine.createSpyObj('HabitService', ['checkInToday'], {
       habits$: of([])
     });
     const notificationServiceSpy = jasmine.createSpyObj('NotificationService', ['checkReminders']);

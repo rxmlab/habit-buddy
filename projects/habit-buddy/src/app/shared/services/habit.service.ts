@@ -1,12 +1,15 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { formatDate } from '@angular/common'; // Import formatDate
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { getBadgeConfigForDays } from '../config/badge-levels.config';
-import { Habit, HabitBadge, HabitStats, MonthlyTrend, Reminder, WeeklyTrend, YearlyTrend } from '../models/habit.model';
+import { DATE_FORMATS } from '../config/date-formats.config'; // Import DATE_FORMATS
+import { Habit, HabitBadge, HabitStats, MonthlyTrend, Reminder, WeeklyTrend, YearlyTrend, CheckIn } from '../models/habit.model';
 import { ApiService } from './api.service';
 import { AuthService } from './auth.service';
 import { AuthUser } from '../interfaces/user.interface';
 import { TimezoneService } from './timezone.service';
+import { isSameDay, toLocalISODate } from '../utils/date.utils';
 
 @Injectable({
   providedIn: 'root'
@@ -23,14 +26,14 @@ export class HabitService {
   public habits = signal(this.habitsSubject.value);
 
   public totalCompleted = computed(() => 
-    this.habits().reduce((sum, habit) => sum + Object.keys(habit.checkIns || {}).length, 0)
+    this.habits().reduce((sum, habit) => sum + (habit.checkIns?.length || 0), 0)
   );
 
   public averageCompletion = computed(() => {
     const habits = this.habits();
     if (habits.length === 0) return 0;
     const totalCompletion = habits.reduce((sum, habit) => {
-      const completed = Object.keys(habit.checkIns || {}).length;
+      const completed = habit.checkIns?.length || 0;
       return sum + (completed / habit.daysTarget * 100);
     }, 0);
     return Math.round(totalCompletion / habits.length);
@@ -48,15 +51,22 @@ export class HabitService {
     const labels: string[] = [];
     const data: number[] = [];
     
+    // Last 7 days including today
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      labels.push(d.toLocaleDateString(undefined, { weekday: 'short' }));
+      labels.push(formatDate(d, DATE_FORMATS.weekday, 'en-US')); // Use standardized format
       
-      const key = d.toISOString().slice(0, 10);
-      const dayTotal = this.habits().reduce((sum, habit) => 
-        sum + ((habit.checkIns && habit.checkIns[key]) ? 1 : 0), 0
-      );
+      const dateStr = d.toISOString().slice(0, 10);
+      
+      const dayTotal = this.habits().reduce((sum, habit) => {
+        if (!habit.checkIns) return sum;
+        // Check if any check-in matches this date
+        const hasCheckIn = habit.checkIns.some(ci => {
+          return new Date(ci.checkInDate).toISOString().slice(0, 10) === dateStr;
+        });
+        return sum + (hasCheckIn ? 1 : 0);
+      }, 0);
       data.push(dayTotal);
     }
     
@@ -80,10 +90,14 @@ export class HabitService {
       const dateStr = date.toISOString().slice(0, 10);
       labels.push(day.toString());
       
-      // Calculate total check-ins for this day
-      const dayTotal = this.habits().reduce((sum, habit) => 
-        sum + ((habit.checkIns && habit.checkIns[dateStr]) ? 1 : 0), 0
-      );
+      const dayTotal = this.habits().reduce((sum, habit) => {
+        if (!habit.checkIns) return sum;
+        const hasCheckIn = habit.checkIns.some(ci => 
+          new Date(ci.checkInDate).toISOString().slice(0, 10) === dateStr
+        );
+        return sum + (hasCheckIn ? 1 : 0);
+      }, 0);
+
       data.push(dayTotal);
     }
     
@@ -97,17 +111,16 @@ export class HabitService {
     for (let i = 11; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
-      labels.push(d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }));
+      labels.push(formatDate(d, DATE_FORMATS.monthYear, 'en-US')); // Use standardized format
       
-      // Calculate total check-ins for this month
       const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
       const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
       
       let monthTotal = 0;
       for (const habit of this.habits()) {
         if (habit.checkIns) {
-          for (const [dateStr, _] of Object.entries(habit.checkIns)) {
-            const checkInDate = new Date(dateStr);
+          for (const ci of habit.checkIns) {
+            const checkInDate = new Date(ci.checkInDate);
             if (checkInDate >= monthStart && checkInDate <= monthEnd) {
               monthTotal++;
             }
@@ -139,7 +152,7 @@ export class HabitService {
   }
 
   // Load habits from backend
-  private loadHabitsFromBackend(): void {
+  refreshHabits(): void {
     this.apiService.getHabits().subscribe({
       next: (habits) => {
         this.habitsSubject.next(habits);
@@ -151,44 +164,35 @@ export class HabitService {
     });
   }
 
+  private loadHabitsFromBackend(): void {
+    this.refreshHabits();
+  }
+
   // Additional methods needed by components
   checkInHabit(habitId: string, date?: string): Observable<any> {
+    // Frontend date is optional string YYYY-MM-DD
+    // We need to support it if provided, or default to now
     return this.apiService.checkInHabit(habitId, date);
   }
 
   deleteHabit(id: string): Observable<void> {
     return this.apiService.deleteHabit(id).pipe(
       tap(() => {
-        const currentHabits = this.habitsSubject.value;
-        this.habitsSubject.next(currentHabits.filter(h => h.id !== id));
+        this.loadHabitsFromBackend();
       })
     );
   }
 
   updateHabit(id: string, habit: Partial<Habit>): Observable<Habit> {
     return this.apiService.updateHabit(id, habit).pipe(
-      tap(updatedHabit => {
-        const currentHabits = this.habitsSubject.value;
-        const index = currentHabits.findIndex(h => h.id === id);
-        if (index !== -1) {
-          currentHabits[index] = updatedHabit;
-          this.habitsSubject.next([...currentHabits]);
-        }
+      tap(() => {
+        this.loadHabitsFromBackend();
       })
     );
   }
 
   getHabitsWithReminders(): Habit[] {
     return this.habits().filter(habit => habit.reminder);
-  }
-
-  private loadHabits(): Habit[] {
-    // No longer using localStorage - habits come from backend
-    return [];
-  }
-
-  private saveHabits(habits: Habit[]): void {
-    // No longer using localStorage - habits saved to backend
   }
 
   addHabit(title: string, reminder?: Reminder | null): Observable<Habit> {
@@ -200,9 +204,8 @@ export class HabitService {
     };
 
     return this.apiService.createHabit(habitData).pipe(
-      tap(newHabit => {
-        const currentHabits = this.habitsSubject.value;
-        this.habitsSubject.next([newHabit, ...currentHabits]);
+      tap(() => {
+        this.loadHabitsFromBackend();
       })
     );
   }
@@ -216,22 +219,7 @@ export class HabitService {
       description: badgeConfig.description,
       icon: badgeConfig.icon,
       daysRequired: badgeConfig.daysRequired,
-      achievedAt: new Date().toISOString()
-    };
-  }
-
-  private updateHabitBadge(habit: Habit): Habit {
-    const completedDays = Object.keys(habit.checkIns || {}).length;
-    const newBadge = this.getBadgeForProgress(completedDays);
-    
-    // Update daysTarget based on current badge level
-    const currentBadgeConfig = getBadgeConfigForDays(completedDays);
-    const newDaysTarget = currentBadgeConfig.daysRequired || 3; // Default to 3 for novice
-
-    return {
-      ...habit,
-      badge: newBadge,
-      daysTarget: newDaysTarget
+      achievedAt: new Date().toISOString() // FE side logic for sample data
     };
   }
 
@@ -247,15 +235,20 @@ export class HabitService {
     this.habitsSubject.next(updatedHabits);
   }
 
-  async toggleCheckinToday(habitId: string): Promise<{ success: boolean; message?: string }> {
+  async checkInToday(habitId: string): Promise<{ success: boolean; message?: string }> {
     const habit = this.habits().find(h => h.id === habitId);
     if (!habit) {
       return { success: false, message: 'Habit not found.' };
     }
 
-    const today = this.getTodayString();
+    const todayDate = new Date();
+    // Safety check: ensure checkIns is an array
+    const checkIns = habit.checkIns || [];
     
-    if (habit.checkIns && habit.checkIns[today]) {
+    // Check if already checked in
+    const todayCheckIn = checkIns.find(ci => isSameDay(ci.checkInDate, todayDate));
+    
+    if (todayCheckIn) {
       return { success: false, message: 'Already checked in today.' };
     }
 
@@ -264,29 +257,28 @@ export class HabitService {
       return { success: false, message: canCheckIn.msg };
     }
 
-    const success = await this.addCheckin(habitId, today);
-    if (success) {
-      const hash = await this.generateCheckinHash(habitId, today);
-      const updatedHabits = this.habits().map(h => {
-        if (h.id === habitId) {
-          const updatedHabit = { ...h, checkIns: { ...h.checkIns, [today]: hash } };
-          return this.updateHabitBadge(updatedHabit);
+    // Create check-in
+    return new Promise((resolve) => {
+      this.apiService.checkInHabit(habitId).subscribe({
+        next: () => {
+           this.loadHabitsFromBackend();
+           resolve({ success: true, message: 'Checked in!' });
+        },
+        error: (err) => {
+          resolve({ success: false, message: err.error?.detail || 'Check-in failed' });
         }
-        return h;
       });
-      this.habitsSubject.next(updatedHabits);
-    }
-
-    return { success };
+    });
   }
 
-  private canCheckIn(habit: Habit): { ok: boolean; msg?: string } {
-    if (this.hasClockTampering()) {
-      return { ok: false, msg: 'Clock tampering detected. Check-in disabled.' };
-    }
 
-    const today = this.getTodayString();
-    if (habit.checkIns && habit.checkIns[today]) {
+
+  private canCheckIn(habit: Habit): { ok: boolean; msg?: string } {
+    // Frontend validation only, backend also validates
+    const todayDate = new Date();
+    const alreadyCheckedIn = habit.checkIns?.some(ci => isSameDay(ci.checkInDate, todayDate));
+
+    if (alreadyCheckedIn) {
       return { ok: false, msg: 'Already checked in today.' };
     }
 
@@ -314,166 +306,122 @@ export class HabitService {
     return { ok: true };
   }
 
-  private async addCheckin(habitId: string, dateStr: string): Promise<boolean> {
-    // No longer using localStorage - check-ins managed by backend
-    return true;
-  }
-
-  private async generateCheckinHash(habitId: string, dateStr: string): Promise<string> {
-    const text = `${habitId}|${dateStr}`;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(text);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-
   calcStreaksForHabit(habit: Habit): HabitStats {
-    const days = habit.checkIns ? Object.keys(habit.checkIns).sort() : [];
-    if (!days.length) return { current: 0, longest: 0, total: 0, breaks: 0 };
+     if (!habit.checkIns || habit.checkIns.length === 0) {
+        return { current: 0, longest: 0, total: 0, breaks: 0 };
+     }
 
-    const checkinSet = new Set(days);
+     const dates = habit.checkIns
+        .map(ci => toLocalISODate(ci.checkInDate))
+        .sort()
+        .filter((v, i, a) => a.indexOf(v) === i); // unique
+
+     if (!dates.length) return { current: 0, longest: 0, total: 0, breaks: 0 };
+
+    // Logic similar to stats.py but in JS
     let longest = 0;
-    let total = days.length;
     let breaks = 0;
+    let tempStreak = 1;
 
-    // Calculate longest streak and breaks
-    for (const day of days) {
-      const prev = this.getPreviousDateString(day);
-      if (!checkinSet.has(prev)) {
-        let current = 1;
-        let next = this.getNextDateString(day);
-        while (checkinSet.has(next)) {
-          current++;
-          next = this.getNextDateString(next);
-        }
-        longest = Math.max(longest, current);
+    for (let i = 1; i < dates.length; i++) {
+        const prev = new Date(dates[i-1]);
+        const curr = new Date(dates[i]);
+        const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
         
-        // Count breaks (gaps between streaks)
-        if (current > 1) {
-          breaks++;
+        if (diffDays === 1) {
+            tempStreak++;
+        } else {
+            longest = Math.max(longest, tempStreak);
+            if (diffDays > 1) {
+                breaks++;
+            }
+            tempStreak = 1;
         }
-      }
     }
+    longest = Math.max(longest, tempStreak);
 
-    // Calculate current streak
+    // Current Streak
     let current = 0;
-    let dt = new Date();
-    // If today is not checked in, start counting from yesterday
-    if (!checkinSet.has(dt.toISOString().slice(0, 10))) {
-      dt.setDate(dt.getDate() - 1);
-    }
-    while (true) {
-      const key = dt.toISOString().slice(0, 10);
-      if (checkinSet.has(key)) {
-        current++;
-        dt.setDate(dt.getDate() - 1);
-      } else {
-        break;
-      }
+    let today = new Date();
+    today.setHours(0,0,0,0);
+    
+    const lastCheckIn = new Date(dates[dates.length - 1]);
+    lastCheckIn.setHours(0,0,0,0);
+
+    const diffToToday = Math.round((today.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffToToday <= 1) {
+        // Streak is alive (today or yesterday checked in)
+        current = 1;
+        for (let i = dates.length - 2; i >= 0; i--) {
+            const curr = new Date(dates[i]);
+            const next = new Date(dates[i+1]);
+            const diff = Math.round((next.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24));
+            if (diff === 1) {
+                current++;
+            } else {
+                break;
+            }
+        }
     }
 
-    return { current, longest, total, breaks };
+    return { current, longest, total: habit.checkIns.length, breaks };
   }
 
   exportHabits(): string {
     return JSON.stringify(this.habits(), null, 2);
   }
 
-  /**
-   * Update habits list (used by ImportService)
-   * @param habits Array of habits to set
-   */
   updateHabitsList(habits: Habit[]): void {
     this.habitsSubject.next(habits);
   }
 
-  /**
-   * Initialize with sample data if no habits exist
-   */
-  private initializeWithSampleDataIfEmpty(): void {
-    const currentHabits = this.habits();
-    if (currentHabits.length === 0) {
-      const sampleHabits = this.createSampleHabits();
-      this.habitsSubject.next(sampleHabits);
-    }
-  }
-
-  /**
-   * Load sample habits (useful for testing or demo purposes)
-   */
   loadSampleHabits(): void {
     const sampleHabits = this.createSampleHabits();
     this.habitsSubject.next(sampleHabits);
   }
 
-  /**
-   * Clear all habits (useful for testing)
-   */
   clearAllHabits(): void {
     this.habitsSubject.next([]);
   }
 
-  /**
-   * Create sample habits for first-time users
-   */
   private createSampleHabits(): Habit[] {
-    // Generate random creation dates spread across the last 2 months
     const today = new Date();
     const twoMonthsAgo = new Date();
     twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
     
-    // Generate check-ins for each habit from its creation date to today
-    const generateCheckInsFromCreation = (habitIndex: number, creationDate: string): Record<string, string> => {
-      const checkIns: Record<string, string> = {};
-      const today = new Date();
+    const generateCheckIns = (habitIndex: number, creationDate: number): CheckIn[] => {
+      const checkIns: CheckIn[] = [];
       const startDate = new Date(creationDate);
-      
-      // Calculate total days from creation date to today
-      const totalDays = Math.floor((today.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
-      
-      // Each habit has different patterns over the 2-month period:
-      // Habit 0: Daily habit (80% completion)
-      // Habit 1: Weekdays only (70% completion)
-      // Habit 2: Every other day (60% completion)
-      // Habit 3: Weekends only (50% completion)
-      // Habit 4: Random pattern (40% completion)
+      const totalDays = Math.floor((new Date().getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
       
       for (let dayOffset = 0; dayOffset <= totalDays; dayOffset++) {
         const date = new Date(startDate.getTime() + dayOffset * 24 * 60 * 60 * 1000);
-        const dateStr = date.toISOString().slice(0, 10);
-        const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const dayOfWeek = date.getDay();
         
         let shouldCheckIn = false;
-        
         switch (habitIndex) {
-          case 0: // Daily habit (80% completion)
-            shouldCheckIn = Math.random() < 0.8;
-            break;
-          case 1: // Weekdays only (70% completion)
-            shouldCheckIn = dayOfWeek >= 1 && dayOfWeek <= 5 && Math.random() < 0.7;
-            break;
-          case 2: // Every other day (60% completion)
-            shouldCheckIn = dayOffset % 2 === 0 && Math.random() < 0.6;
-            break;
-          case 3: // Weekends only (50% completion)
-            shouldCheckIn = (dayOfWeek === 0 || dayOfWeek === 6) && Math.random() < 0.5;
-            break;
-          case 4: // Random pattern (40% completion)
-            shouldCheckIn = Math.random() < 0.4;
-            break;
+          case 0: shouldCheckIn = Math.random() < 0.8; break;
+          case 1: shouldCheckIn = dayOfWeek >= 1 && dayOfWeek <= 5 && Math.random() < 0.7; break;
+          case 2: shouldCheckIn = dayOffset % 2 === 0 && Math.random() < 0.6; break;
+          case 3: shouldCheckIn = (dayOfWeek === 0 || dayOfWeek === 6) && Math.random() < 0.5; break;
+          case 4: shouldCheckIn = Math.random() < 0.4; break;
         }
         
         if (shouldCheckIn) {
-          checkIns[dateStr] = `sample-hash-${habitIndex}-${dayOffset}`;
+          checkIns.push({
+              id: this.generateId(),
+              habitId: `sample-${habitIndex}`,
+              checkInDate: date.getTime(),
+              status: 'completed',
+              createdAt: date.getTime()
+          });
         }
       }
-      
       return checkIns;
     };
 
-    // Generate habits with random creation dates
-    const habits = [
+    const habitsData = [
       { title: 'Morning Meditation', daysTarget: 30, categoryId: '30', color: this.COLORS[0] },
       { title: 'Drink 8 Glasses of Water', daysTarget: 21, categoryId: '21', color: this.COLORS[1] },
       { title: 'Exercise for 30 Minutes', daysTarget: 30, categoryId: '30', color: this.COLORS[2] },
@@ -481,25 +429,22 @@ export class HabitService {
       { title: 'Practice Gratitude', daysTarget: 21, categoryId: '21', color: this.COLORS[4] }
     ];
 
-    return habits.map((habit, index) => {
-      // Generate a unique random creation date for each habit
+    return habitsData.map((h, index) => {
       const randomTime = twoMonthsAgo.getTime() + Math.random() * (today.getTime() - twoMonthsAgo.getTime());
-      const creationDate = new Date(randomTime).toISOString().slice(0, 10);
       
       return {
         id: this.generateId(),
-        title: habit.title,
-        daysTarget: habit.daysTarget,
-        categoryId: habit.categoryId,
-        color: habit.color,
-        createdAt: creationDate,
-        checkIns: generateCheckInsFromCreation(index, creationDate),
+        title: h.title,
+        daysTarget: h.daysTarget,
+        categoryId: h.categoryId,
+        color: h.color,
+        createdAt: randomTime,
+        checkIns: generateCheckIns(index, randomTime),
         reminder: null
       };
     });
   }
 
-  // Utility methods
   private generateId(): string {
     return Math.random().toString(36).slice(2, 9);
   }
@@ -508,29 +453,9 @@ export class HabitService {
     return this.COLORS[index % this.COLORS.length];
   }
 
-  private getTodayString(): string {
-    return this.timezoneService.getTodayString();
-  }
-
-  private getPreviousDateString(dateStr: string): string {
-    const dt = new Date(dateStr);
-    dt.setDate(dt.getDate() - 1);
-    return this.timezoneService.formatDateString(dt);
-  }
-
-  private getNextDateString(dateStr: string): string {
-    const dt = new Date(dateStr);
-    dt.setDate(dt.getDate() + 1);
-    return this.timezoneService.formatDateString(dt);
-  }
-
-  private hasClockTampering(): boolean {
-    // No longer using localStorage - clock tampering detection managed by backend
-    return false;
-  }
-
   private hhmmToMins(hhmm: string): number {
     const [h, m] = (hhmm || '00:00').split(':').map(Number);
     return h * 60 + m;
   }
 }
+

@@ -29,11 +29,9 @@ export class GoalsComponent implements OnInit, OnDestroy {
   protected readonly activeFilter = signal<string>('all');
   protected readonly showFilters = signal<boolean>(false);
   
-  
   // Mobile form dialog state
   protected readonly showMobileFormDialog = signal<boolean>(false);
   
-
   // Other filter options (Status, features, etc.)
   protected readonly otherFilterOptions = [
     { value: 'active', label: 'Active Streaks', count: 0, icon: 'Flame' },
@@ -73,12 +71,15 @@ export class GoalsComponent implements OnInit, OnDestroy {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         return allHabits.filter(habit => {
+          if (!habit.createdAt) return false;
           const createdDate = new Date(habit.createdAt);
           return createdDate >= sevenDaysAgo;
         });
       case 'completed-today':
         const today = new Date().toISOString().slice(0, 10);
-        return allHabits.filter(habit => habit.checkIns && habit.checkIns[today]);
+        return allHabits.filter(habit => 
+            habit.checkIns && habit.checkIns.some(ci => new Date(ci.checkInDate).toISOString().slice(0, 10) === today)
+        );
       default:
         return allHabits;
     }
@@ -88,8 +89,6 @@ export class GoalsComponent implements OnInit, OnDestroy {
   protected readonly hasHabits = computed(() => this.habits().length > 0);
   protected readonly hasFilteredHabits = computed(() => this.filteredHabits().length > 0);
   
-  // Computed batch filter options with counts
-
   // Computed other filter options with counts
   protected readonly otherFilterOptionsWithCounts = computed(() => {
     const allHabits = this.habits();
@@ -111,13 +110,16 @@ export class GoalsComponent implements OnInit, OnDestroy {
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
           count = allHabits.filter(habit => {
+            if (!habit.createdAt) return false;
             const createdDate = new Date(habit.createdAt);
             return createdDate >= sevenDaysAgo;
           }).length;
           break;
         case 'completed-today':
           const today = new Date().toISOString().slice(0, 10);
-          count = allHabits.filter(habit => habit.checkIns && habit.checkIns[today]).length;
+          count = allHabits.filter(habit => 
+              habit.checkIns && habit.checkIns.some(ci => new Date(ci.checkInDate).toISOString().slice(0, 10) === today)
+          ).length;
           break;
       }
       
@@ -154,8 +156,6 @@ export class GoalsComponent implements OnInit, OnDestroy {
     return otherOption?.count || 0;
   });
 
-
-  
   // Simplified reminder modal state
   protected readonly selectedHabit = signal<Habit | null>(null);
   
@@ -181,8 +181,11 @@ export class GoalsComponent implements OnInit, OnDestroy {
         this.checkReminders();
       }, 30000);
     }
+
+    // Force refresh from backend
+    this.habitService.refreshHabits();
     
-    // Check immediately
+    // Check reminders immediately
     this.checkReminders();
   }
 
@@ -206,17 +209,16 @@ export class GoalsComponent implements OnInit, OnDestroy {
     });
   }
 
+
   protected async onCheckin(habitId: string): Promise<void> {
-    this.habitService.checkInHabit(habitId).subscribe({
-      next: () => {
+    const result = await this.habitService.checkInToday(habitId);
+    if (result.success) {
         this.notificationService.playSuccessSound();
         this.notificationService.triggerConfetti();
-      },
-      error: (error) => {
-        console.error('Error checking in habit:', error);
-        this.dialogService.showError('Failed to check in habit');
-      }
-    });
+    } else {
+        console.error('Check-in failed:', result.message);
+        this.dialogService.showError(result.message || 'Failed to check in habit');
+    }
   }
 
   protected onRemoveHabit(habitId: string): void {
@@ -278,10 +280,10 @@ export class GoalsComponent implements OnInit, OnDestroy {
   protected getHabitStats(habit: Habit) {
     const stats = this.calcStreaksForHabit(habit);
     return {
-      total: Object.keys(habit.checkIns || {}).length,
+      total: habit.checkIns?.length || 0,
       current: stats.current,
       longest: stats.longest,
-      breaks: 0 // TODO: Calculate breaks
+      breaks: 0
     };
   }
 
@@ -293,7 +295,6 @@ export class GoalsComponent implements OnInit, OnDestroy {
   protected toggleFilters(): void {
     this.showFilters.set(!this.showFilters());
   }
-
   
   // Mobile form dialog methods
   protected openMobileFormDialog(): void {
@@ -308,7 +309,6 @@ export class GoalsComponent implements OnInit, OnDestroy {
     this.onHabitAdded(habit);
     this.closeMobileFormDialog();
   }
-
 
   protected getFilterIcon(iconName: string): any {
     const iconMap: { [key: string]: any } = {
@@ -335,10 +335,15 @@ export class GoalsComponent implements OnInit, OnDestroy {
 
   // Create a tracking key that changes when checkIns change
   protected getHabitTrackingKey(habit: Habit): string {
-    const checkInsHash = JSON.stringify(habit.checkIns || {});
-    return `${habit.id}-${checkInsHash.slice(0, 10)}`; // Include checkIns in tracking
+    const checkInsLength = habit.checkIns?.length || 0;
+    // Simple key based on length - if array contents change but length same, this might miss updates
+    // Better to include last checkin timestamp if available
+    let lastTs = 0;
+    if (checkInsLength > 0 && habit.checkIns) {
+        lastTs = habit.checkIns[checkInsLength - 1].checkInDate;
+    }
+    return `${habit.id}-${checkInsLength}-${lastTs}`; 
   }
-
 
   // Icon references
   protected readonly ChevronDownIcon = ChevronDown;
@@ -365,61 +370,7 @@ export class GoalsComponent implements OnInit, OnDestroy {
     this.notificationService.checkReminders(this.habits());
   }
 
-  private getRandomColor(): string {
-    const colors = ['#ff6b6b', '#ffd166', '#06d6a0', '#4d96ff', '#b388eb', '#ffa07a', '#7dd3fc'];
-    return colors[Math.floor(Math.random() * colors.length)];
-  }
-
   protected calcStreaksForHabit(habit: Habit): { current: number; longest: number } {
-    if (!habit.checkIns || Object.keys(habit.checkIns).length === 0) {
-      return { current: 0, longest: 0 };
-    }
-
-    const sortedCheckIns = Object.keys(habit.checkIns).sort();
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let tempStreak = 0;
-
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-    for (let i = 0; i < sortedCheckIns.length; i++) {
-      const checkInDate = sortedCheckIns[i];
-      const previousCheckInDate = sortedCheckIns[i - 1];
-
-      if (i === 0) {
-        tempStreak = 1;
-      } else {
-        const prevDate = new Date(previousCheckInDate);
-        const currDate = new Date(checkInDate);
-        const diff = Math.floor((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (diff === 1) {
-          tempStreak++;
-        } else if (diff > 1) {
-          tempStreak = 1;
-        }
-      }
-      longestStreak = Math.max(longestStreak, tempStreak);
-    }
-
-    // Calculate current streak based on today or yesterday
-    if (habit.checkIns[today]) {
-      currentStreak = tempStreak;
-    } else if (habit.checkIns[yesterday]) {
-      let lastDate = yesterday;
-      let streak = 0;
-      while (habit.checkIns[lastDate]) {
-        streak++;
-        const prevDate = new Date(lastDate);
-        prevDate.setDate(prevDate.getDate() - 1);
-        lastDate = prevDate.toISOString().slice(0, 10);
-      }
-      currentStreak = streak;
-    } else {
-      currentStreak = 0;
-    }
-
-    return { current: currentStreak, longest: longestStreak };
+     return this.habitService.calcStreaksForHabit(habit);
   }
 }

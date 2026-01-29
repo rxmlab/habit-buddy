@@ -2,47 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as datetime_date
 import hashlib
 
-from app.database import get_db, Habit, CheckIn, Reminder as ReminderModel, User
+from app.database import get_db, Habit, CheckIn, Reminder as ReminderModel, User, Category
 from app.schemas import (
     HabitCreate, HabitUpdate, HabitResponse, CheckInCreate, CheckInResponse,
-    HabitBadge, BadgeLevel, Reminder
+    Reminder, CheckInStatus, CategoryResponse
 )
 from app.routers.auth import get_current_user
 
 router = APIRouter()
 
-# Badge configuration matching Angular frontend
-BADGE_LEVELS = {
-    BadgeLevel.NOVICE: {"days": 7, "name": "Novice", "icon": "🌱"},
-    BadgeLevel.BEGINNER: {"days": 21, "name": "Beginner", "icon": "🌿"},
-    BadgeLevel.INTERMEDIATE: {"days": 50, "name": "Intermediate", "icon": "🌳"},
-    BadgeLevel.ADVANCED: {"days": 100, "name": "Advanced", "icon": "🏆"},
-    BadgeLevel.EXPERT: {"days": 200, "name": "Expert", "icon": "👑"},
-    BadgeLevel.MASTER: {"days": 365, "name": "Master", "icon": "🌟"}
-}
-
-def calculate_badge(completed_days: int) -> Optional[HabitBadge]:
-    """Calculate badge based on completed days"""
-    for level in [BadgeLevel.MASTER, BadgeLevel.EXPERT, BadgeLevel.ADVANCED, 
-                  BadgeLevel.INTERMEDIATE, BadgeLevel.BEGINNER, BadgeLevel.NOVICE]:
-        config = BADGE_LEVELS[level]
-        if completed_days >= config["days"]:
-            return HabitBadge(
-                level=level,
-                name=config["name"],
-                description=f"Completed {config['days']}+ days",
-                icon=config["icon"],
-                days_required=config["days"],
-                achieved_at=datetime.utcnow().isoformat()
-            )
-    return None
-
-def generate_check_in_hash(habit_id: str, date: str) -> str:
-    """Generate a hash for check-in verification"""
-    return hashlib.md5(f"{habit_id}_{date}".encode()).hexdigest()
+def get_current_timestamp():
+    return int(datetime.utcnow().timestamp() * 1000)
 
 @router.get("", response_model=List[HabitResponse])
 async def get_habits(
@@ -56,15 +29,6 @@ async def get_habits(
     for habit in habits:
         # Get check-ins for this habit
         check_ins = db.query(CheckIn).filter(CheckIn.habit_id == habit.id).all()
-        check_ins_dict = {}
-        
-        for check_in in check_ins:
-            date_str = check_in.check_in_date.strftime("%Y-%m-%d")
-            check_ins_dict[date_str] = generate_check_in_hash(habit.id, date_str)
-        
-        # Calculate badge
-        completed_days = len(check_ins)
-        badge = calculate_badge(completed_days)
         
         # Get reminder
         reminder = None
@@ -72,18 +36,24 @@ async def get_habits(
             reminder = Reminder(
                 time=habit.reminder.time,
                 days=habit.reminder.days,
-                window=habit.reminder.window
+                window=habit.reminder.window,
+                is_active=habit.reminder.is_active
             )
         
+        # Get category
+        category = None
+        if habit.category:
+            category = CategoryResponse.model_validate(habit.category)
+
         result.append(HabitResponse(
             id=habit.id,
             title=habit.title,
             days_target=habit.days_target,
             category_id=habit.category_id,
-            badge=badge,
+            category=category,
             color=habit.color,
-            created_at=habit.created_at.isoformat(),
-            check_ins=check_ins_dict,
+            created_at=habit.created_at,
+            check_ins=[CheckInResponse.model_validate(ci) for ci in check_ins],
             reminder=reminder
         ))
     
@@ -103,7 +73,9 @@ async def create_habit(
         title=habit_data.title,
         days_target=habit_data.days_target,
         category_id=habit_data.category_id,
-        color=habit_data.color
+        color=habit_data.color,
+        created_at=get_current_timestamp(),
+        updated_at=get_current_timestamp()
     )
     
     db.add(habit)
@@ -116,22 +88,26 @@ async def create_habit(
             habit_id=habit.id,
             time=habit_data.reminder.time,
             days=habit_data.reminder.days,
-            window=habit_data.reminder.window
+            window=habit_data.reminder.window,
+            is_active=habit_data.reminder.is_active,
+            created_at=get_current_timestamp(),
+            updated_at=get_current_timestamp()
         )
         db.add(reminder)
     
     db.commit()
     db.refresh(habit)
     
+    # Construct response manually to ensure all fields are present
     return HabitResponse(
         id=habit.id,
         title=habit.title,
         days_target=habit.days_target,
         category_id=habit.category_id,
-        badge=None,
+        category=None, # New habit relies on ID, relationship might not be loaded yet
         color=habit.color,
-        created_at=habit.created_at.isoformat(),
-        check_ins={},
+        created_at=habit.created_at,
+        check_ins=[],
         reminder=habit_data.reminder
     )
 
@@ -155,15 +131,6 @@ async def get_habit(
     
     # Get check-ins
     check_ins = db.query(CheckIn).filter(CheckIn.habit_id == habit.id).all()
-    check_ins_dict = {}
-    
-    for check_in in check_ins:
-        date_str = check_in.check_in_date.strftime("%Y-%m-%d")
-        check_ins_dict[date_str] = generate_check_in_hash(habit.id, date_str)
-    
-    # Calculate badge
-    completed_days = len(check_ins)
-    badge = calculate_badge(completed_days)
     
     # Get reminder
     reminder = None
@@ -171,18 +138,24 @@ async def get_habit(
         reminder = Reminder(
             time=habit.reminder.time,
             days=habit.reminder.days,
-            window=habit.reminder.window
+            window=habit.reminder.window,
+            is_active=habit.reminder.is_active
         )
+        
+    # Get category
+    category = None
+    if habit.category:
+        category = CategoryResponse.model_validate(habit.category)
     
     return HabitResponse(
         id=habit.id,
         title=habit.title,
         days_target=habit.days_target,
         category_id=habit.category_id,
-        badge=badge,
+        category=category,
         color=habit.color,
-        created_at=habit.created_at.isoformat(),
-        check_ins=check_ins_dict,
+        created_at=habit.created_at,
+        check_ins=[CheckInResponse.model_validate(ci) for ci in check_ins],
         reminder=reminder
     )
 
@@ -215,6 +188,8 @@ async def update_habit(
     if habit_data.color is not None:
         habit.color = habit_data.color
     
+    habit.updated_at = get_current_timestamp()
+
     # Update reminder
     if habit_data.reminder is not None:
         if habit.reminder:
@@ -222,6 +197,8 @@ async def update_habit(
             habit.reminder.time = habit_data.reminder.time
             habit.reminder.days = habit_data.reminder.days
             habit.reminder.window = habit_data.reminder.window
+            habit.reminder.is_active = habit_data.reminder.is_active
+            habit.reminder.updated_at = get_current_timestamp()
         else:
             # Create new reminder
             reminder = ReminderModel(
@@ -229,7 +206,10 @@ async def update_habit(
                 habit_id=habit.id,
                 time=habit_data.reminder.time,
                 days=habit_data.reminder.days,
-                window=habit_data.reminder.window
+                window=habit_data.reminder.window,
+                is_active=habit_data.reminder.is_active,
+                created_at=get_current_timestamp(),
+                updated_at=get_current_timestamp()
             )
             db.add(reminder)
     
@@ -283,25 +263,27 @@ async def check_in_habit(
         )
     
     # Use provided date or current date
-    check_in_date = check_in_data.check_in_date or datetime.utcnow()
+    check_in_ts = check_in_data.check_in_date or get_current_timestamp()
     
-    # Check if check-in already exists for this date
-    existing_check_in = db.query(CheckIn).filter(
-        CheckIn.habit_id == habit_id,
-        CheckIn.check_in_date.date() == check_in_date.date()
-    ).first()
-    
-    if existing_check_in:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Check-in already exists for this date"
-        )
+    # Since we use timestamps, duplicates are technically exact ms matches.
+    # To prevent multiple check-ins per day, we need logic to check if a check-in exists for this "day".
+    # Converting TS to date depends on timezone. The User has a timezone field now.
+    # For now, let's just check for exact timestamp collision? 
+    # Or strict "one per day" rule might be flexible now with detailed check-ins.
+    # The requirement didn't specify strict one-per-day enforcement with the new schema, but it's a good habit app practice.
+    # However, simpler implementation is allowing multiple or checking exact range if needed.
+    # Let's align with the "Enhanced Check-ins" (status, note). Maybe multiple notes per day are allowed?
+    # I'll enable multiple per day for now unless it conflicts effectively. If I want to enforce uniqueness, I'd need complex day boundary logic with TZ.
+    # I'll rely on client to send unique timestamps.
     
     # Create check-in
     check_in = CheckIn(
         id=str(uuid.uuid4()),
         habit_id=habit_id,
-        check_in_date=check_in_date
+        check_in_date=check_in_ts,
+        status=check_in_data.status,
+        note=check_in_data.note,
+        created_at=get_current_timestamp()
     )
     
     db.add(check_in)
@@ -312,17 +294,19 @@ async def check_in_habit(
         id=check_in.id,
         habit_id=check_in.habit_id,
         check_in_date=check_in.check_in_date,
+        status=check_in.status,
+        note=check_in.note,
         created_at=check_in.created_at
     )
 
-@router.delete("/{habit_id}/check-in/{date}")
+@router.delete("/{habit_id}/check-in/{check_in_id}")
 async def delete_check_in(
     habit_id: str,
-    date: str,
+    check_in_id: str,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
-    """Delete a check-in for a specific date"""
+    """Delete a specific check-in by ID"""
     # Verify habit belongs to user
     habit = db.query(Habit).filter(
         Habit.id == habit_id,
@@ -335,19 +319,10 @@ async def delete_check_in(
             detail="Habit not found"
         )
     
-    # Parse date
-    try:
-        check_in_date = datetime.strptime(date, "%Y-%m-%d").date()
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid date format. Use YYYY-MM-DD"
-        )
-    
     # Find and delete check-in
     check_in = db.query(CheckIn).filter(
-        CheckIn.habit_id == habit_id,
-        CheckIn.check_in_date.date() == check_in_date
+        CheckIn.id == check_in_id,
+        CheckIn.habit_id == habit_id
     ).first()
     
     if not check_in:
@@ -360,3 +335,4 @@ async def delete_check_in(
     db.commit()
     
     return {"message": "Check-in deleted successfully"}
+

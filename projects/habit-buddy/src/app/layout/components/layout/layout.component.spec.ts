@@ -29,7 +29,7 @@ describe('LayoutComponent', () => {
       currentReminder: signal(null)
     });
 
-    const habitServiceSpy = jasmine.createSpyObj('HabitService', ['toggleCheckinToday']);
+    const habitServiceSpy = jasmine.createSpyObj('HabitService', ['checkInToday']);
 
     await TestBed.configureTestingModule({
       imports: [LayoutComponent, RouterTestingModule],
@@ -75,7 +75,7 @@ describe('LayoutComponent', () => {
 
     it('should mark habit as done when onMarkHabitAsDone is called', async () => {
       const habitId = 'test-habit-id';
-      habitService.toggleCheckinToday.and.returnValue(Promise.resolve({ success: true }));
+      habitService.checkInToday.and.returnValue(Promise.resolve({ success: true }));
       
       await (component as any).onMarkHabitAsDone(habitId);
       

@@ -79,7 +79,11 @@ async def signup(user_data: UserAuth, db: Session = Depends(get_db)):
     db.refresh(new_user)
     
     # Create Token
-    access_token = create_access_token(data={"sub": new_user.id, "email": new_user.email})
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": new_user.id, "email": new_user.email},
+        expires_delta=access_token_expires
+    )
     
     return {
         "access_token": access_token, 
@@ -103,7 +107,11 @@ async def login(user_data: UserAuth, db: Session = Depends(get_db)):
         )
     
     # Create Token
-    access_token = create_access_token(data={"sub": user.id, "email": user.email})
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.id, "email": user.email},
+        expires_delta=access_token_expires
+    )
     
     return {
         "access_token": access_token, 
@@ -192,7 +200,7 @@ async def get_user_profile(current_user: dict = Depends(get_current_user), db: S
         "id": user.id, 
         "email": user.email, 
         "display_name": user.display_name, 
-        "created_at": user.created_at.isoformat()
+        "created_at": user.created_at
     }
 
 @router.post("/verify")

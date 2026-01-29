@@ -20,8 +20,8 @@ describe('GoalsComponent', () => {
       title: 'Test Habit 1',
       daysTarget: 30,
       color: '#ff6b6b',
-      createdAt: new Date().toISOString().slice(0, 10), // Today's date
-      checkIns: { [new Date().toISOString().slice(0, 10)]: 'completed' }, // Today's check-in
+      createdAt: Date.now(), // Today's date
+      checkIns: [{ id: 'c1', habitId: '1', checkInDate: Date.now(), status: 'completed', createdAt: Date.now() }], // Today's check-in
       reminder: null,
       badge: { level: BadgeLevel.NOVICE, name: 'Novice', description: 'Novice badge', icon: 'star', daysRequired: 1 }
     },
@@ -30,8 +30,8 @@ describe('GoalsComponent', () => {
       title: 'Test Habit 2',
       daysTarget: 30,
       color: '#4ecdc4',
-      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10), // 3 days ago
-      checkIns: {},
+      createdAt: Date.now() - 3 * 24 * 60 * 60 * 1000, // 3 days ago
+      checkIns: [],
       reminder: { time: '09:00', days: [1, 2, 3], window: 120 },
       badge: null
     }
@@ -39,7 +39,7 @@ describe('GoalsComponent', () => {
 
   beforeEach(async () => {
     const habitServiceSpy = jasmine.createSpyObj('HabitService', [
-      'addHabit', 'removeHabit', 'toggleCheckinToday', 'calcStreaksForHabit', 'updateHabitReminder'
+      'addHabit', 'removeHabit', 'checkInToday', 'calcStreaksForHabit', 'updateHabitReminder'
     ], {
       habits$: of(mockHabits)
     });
@@ -107,13 +107,13 @@ describe('GoalsComponent', () => {
         title: 'Test Habit', 
         daysTarget: 30, 
         color: '#ff6b6b', 
-        createdAt: '2023-01-01', 
-        checkIns: {}, 
+        createdAt: Date.now(), 
+        checkIns: [], 
         reminder: null, 
         badge: null 
       };
       
-      habitService.addHabit.and.returnValue(mockCreatedHabit);
+      habitService.addHabit.and.returnValue(of(mockCreatedHabit));
       
       (component as any).onHabitAdded(mockHabit);
       
@@ -132,13 +132,13 @@ describe('GoalsComponent', () => {
         title: 'Test Habit', 
         daysTarget: 30, 
         color: '#ff6b6b', 
-        createdAt: '2023-01-01', 
-        checkIns: {}, 
+        createdAt: Date.now(), 
+        checkIns: [], 
         reminder: mockHabit.reminder, 
         badge: null 
       };
       
-      habitService.addHabit.and.returnValue(mockCreatedHabit);
+      habitService.addHabit.and.returnValue(of(mockCreatedHabit));
       
       (component as any).onHabitAdded(mockHabit);
       
@@ -157,11 +157,11 @@ describe('GoalsComponent', () => {
 
     it('should check in a habit when onCheckin is called successfully', async () => {
       const habitId = '1';
-      habitService.toggleCheckinToday.and.returnValue(Promise.resolve({ success: true }));
+      habitService.checkInToday.and.returnValue(Promise.resolve({ success: true }));
       
       await (component as any).onCheckin(habitId);
       
-      expect(habitService.toggleCheckinToday).toHaveBeenCalledWith(habitId);
+      expect(habitService.checkInToday).toHaveBeenCalledWith(habitId);
       expect(notificationService.playSuccessSound).toHaveBeenCalled();
       expect(notificationService.triggerConfetti).toHaveBeenCalled();
     });
@@ -169,11 +169,11 @@ describe('GoalsComponent', () => {
     it('should show error when onCheckin fails', async () => {
       const habitId = '1';
       const errorMessage = 'Cannot check in on future date';
-      habitService.toggleCheckinToday.and.returnValue(Promise.resolve({ success: false, message: errorMessage }));
+      habitService.checkInToday.and.returnValue(Promise.resolve({ success: false, message: errorMessage }));
       
       await (component as any).onCheckin(habitId);
       
-      expect(habitService.toggleCheckinToday).toHaveBeenCalledWith(habitId);
+      expect(habitService.checkInToday).toHaveBeenCalledWith(habitId);
       expect(dialogService.showError).toHaveBeenCalledWith(errorMessage);
       expect(notificationService.playSuccessSound).not.toHaveBeenCalled();
       expect(notificationService.triggerConfetti).not.toHaveBeenCalled();
@@ -343,13 +343,13 @@ describe('GoalsComponent', () => {
         title: 'Test Habit', 
         daysTarget: 30, 
         color: '#ff6b6b', 
-        createdAt: '2023-01-01', 
-        checkIns: {}, 
+        createdAt: Date.now(), 
+        checkIns: [], 
         reminder: null, 
         badge: null 
       };
       
-      habitService.addHabit.and.returnValue(mockCreatedHabit);
+      habitService.addHabit.and.returnValue(of(mockCreatedHabit));
       
       (component as any).onMobileHabitAdded(mockHabit);
       

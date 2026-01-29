@@ -1,15 +1,17 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe, formatDate } from '@angular/common';
 import { Component, computed, EventEmitter, input, Output, signal } from '@angular/core';
 import { Bell, Calendar, Check, Clock, Crown, Link, LucideAngularModule, RotateCcw, Sparkles, Sprout, Star, Target, Trash2, Trophy } from 'lucide-angular';
 import { CircularProgressComponent } from '../../../../shared/components/circular-progress/circular-progress.component';
 import { DialogButton, DialogComponent } from '../../../../shared/components/dialog/dialog.component';
 import { calculateProgressToNextLevel, getBadgeConfig, getBadgeConfigForDays } from '../../../../shared/config/badge-levels.config';
 import { Habit, HabitStats } from '../../../../shared/models/habit.model';
+import { isSameDay, toLocalISODate } from '../../../../shared/utils/date.utils';
 
 @Component({
   selector: 'app-habit-card',
   standalone: true,
   imports: [CommonModule, LucideAngularModule, DialogComponent, CircularProgressComponent],
+  providers: [DatePipe],
   templateUrl: './habit-card.component.html',
   styleUrl: './habit-card.component.scss'
 })
@@ -35,7 +37,7 @@ export class HabitCardComponent {
     const habit = this.habit();
     
     if (!habit?.createdAt) {
-      return Object.keys(habit?.checkIns || {}).length; // Fallback to check-ins count if no creation date
+      return habit?.checkIns?.length || 0; // Fallback to check-ins count if no creation date
     }
     
     const creationDate = new Date(habit.createdAt);
@@ -48,8 +50,11 @@ export class HabitCardComponent {
 
   protected readonly isCheckedToday = computed(() => {
     const habit = this.habit();
-    const today = new Date().toISOString().slice(0, 10);
-    return !!(habit?.checkIns && habit.checkIns[today]);
+    if (!habit?.checkIns?.length) return false;
+    
+    // Use strictly same day check
+    const now = new Date();
+    return habit.checkIns.some(ci => isSameDay(ci.checkInDate, now));
   });
 
   // Get the goal created date
@@ -64,27 +69,13 @@ export class HabitCardComponent {
 
   constructor(){}
 
-  // Format created date for display
-  protected getFormattedCreatedDate(): string {
-    const createdDate = this.goalCreatedDate();
-    if (!createdDate) {
-      return 'Unknown';
-    }
-    
-    return createdDate.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  }
-
   // Progress calculation for the circular chart
   protected readonly progressPercentage = computed(() => {
     // Calculate percentage based on recent activity (last 14 days)
     const activityData = this.getRecentActivityDays();
     if (activityData.length === 0) {
       // Fallback to badge progress if no activity data
-      const completed = this.completedCount();
+      const completed = this.habit()?.checkIns?.length || 0;
       return calculateProgressToNextLevel(completed);
     }
     
@@ -96,7 +87,7 @@ export class HabitCardComponent {
 
   // Badge level text
   protected readonly badgeLevelText = computed(() => {
-    const completed = this.completedCount();
+    const completed = this.habit()?.checkIns?.length || 0;
     const badgeConfig = getBadgeConfigForDays(completed);
     return badgeConfig.name;
   });
@@ -126,7 +117,7 @@ export class HabitCardComponent {
   // Inspiring tooltip for chart hover
   protected readonly chartTooltip = computed(() => {
     const habit = this.habit();
-    const completed = this.completedCount();
+    const completed = habit?.checkIns?.length || 0;
     const progress = this.progressPercentage();
     const level = this.badgeLevelText();
     const activityData = this.getRecentActivityDays();
@@ -169,7 +160,7 @@ export class HabitCardComponent {
   // Badge styling methods
   protected getBadgeClasses(): string {
     const habit = this.habit();
-    const completedDays = this.completedCount();
+    const completedDays = habit?.checkIns?.length || 0;
     
     // Get badge config (either from habit.badge or calculate from days)
     const badgeConfig = habit?.badge ? 
@@ -192,14 +183,13 @@ export class HabitCardComponent {
     
     // If current streak is 0 but longest streak is >= 3, check for recent break
     if (stats.current === 0 && stats.longest >= 3) {
-      const checkIns = habit.checkIns || {};
-      const today = new Date().toISOString().slice(0, 10);
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const checkIns = habit.checkIns || [];
+      const checkInDates = new Set(checkIns.map(ci => toLocalISODate(ci.checkInDate)));
       
       // Check if there was a check-in in the last 3 days but not today/yesterday
       for (let i = 2; i <= 4; i++) {
-        const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        if (checkIns[date]) {
+        const date = toLocalISODate(new Date(Date.now() - i * 24 * 60 * 60 * 1000));
+        if (checkInDates.has(date)) {
           return true; // Recent activity but current streak broken
         }
       }
@@ -211,7 +201,9 @@ export class HabitCardComponent {
   // Generate recent activity data for visualization - only from goal creation date onwards
   protected getRecentActivityDays(): Array<{date: string, status: string, tooltip: string}> {
     const habit = this.habit();
-    const checkIns = habit.checkIns || {};
+    const checkIns = habit.checkIns || [];
+    const checkInDates = new Set(checkIns.map(ci => toLocalISODate(ci.checkInDate)));
+    
     const days = [];
     
     if (!habit?.createdAt) {
@@ -230,27 +222,26 @@ export class HabitCardComponent {
     // Generate days from creation date onwards
     for (let i = daysToShow - 1; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      const dateStr = date.toISOString().slice(0, 10);
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-      const dayNum = date.getDate();
+      const dateStr = toLocalISODate(date);
+      const dayLabel = formatDate(date, 'EEE d', 'en-US'); // Standardized "Day Num" format
       
       let status = 'missed';
-      let tooltip = `${dayName} ${dayNum}: Missed`;
+      let tooltip = `${dayLabel}: Missed`;
       
-      if (checkIns[dateStr]) {
+      if (checkInDates.has(dateStr)) {
         status = 'completed';
-        tooltip = `${dayName} ${dayNum}: Completed ✅`;
+        tooltip = `${dayLabel}: Completed ✅`;
       } else if (i === 0) {
         status = 'today';
-        tooltip = `Today: ${checkIns[dateStr] ? 'Completed ✅' : 'Not yet completed'}`;
+        tooltip = `Today: ${checkInDates.has(dateStr) ? 'Completed ✅' : 'Not yet completed'}`;
       } else {
         // Check if this is a streak break (had activity before and after)
-        const prevDay = new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        const nextDay = new Date(Date.now() - (i - 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const prevDay = toLocalISODate(new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000));
+        const nextDay = toLocalISODate(new Date(Date.now() - (i - 1) * 24 * 60 * 60 * 1000));
         
-        if (checkIns[prevDay] && (checkIns[nextDay] || i === 1)) {
+        if (checkInDates.has(prevDay) && (checkInDates.has(nextDay) || i === 1)) {
           status = 'break';
-          tooltip = `${dayName} ${dayNum}: Streak Break ⚠️`;
+          tooltip = `${dayLabel}: Streak Break ⚠️`;
         }
       }
       
@@ -344,7 +335,7 @@ export class HabitCardComponent {
     };
     
     const habit = this.habit();
-    const completedDays = this.completedCount();
+    const completedDays = habit?.checkIns?.length || 0;
     
     // Get badge config (either from habit.badge or calculate from days)
     const badgeConfig = habit?.badge ? 
@@ -360,6 +351,9 @@ export class HabitCardComponent {
   }
 
   protected onCheckin(): void {
+    if (this.isCheckedToday()) {
+      return; // Prevent duplicate check-ins or toggling off (strict one-way)
+    }
     this.checkin.emit();
   }
 

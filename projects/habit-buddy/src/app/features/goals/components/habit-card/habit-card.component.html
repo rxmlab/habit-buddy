@@ -3,7 +3,7 @@
   <div class="card-header">
     <div class="title-section">
       <h3 class="habit-title">{{ habit().title }}</h3>
-      <div class="start-date">Created {{ getFormattedCreatedDate() }}</div>
+      <div class="start-date" *ngIf="goalCreatedDate()">Created {{ goalCreatedDate() | date: 'mediumDate' }}</div>
     </div>
     <!-- <div class="habit-status" [class]="isCheckedToday() ? 'status-completed' : 'status-active'">
       {{ statusText() }}
@@ -104,6 +104,7 @@
     <button 
       class="check-in-btn"
       (click)="onCheckin()"
+      [disabled]="isCheckedToday()"
       [class]="isCheckedToday() ? 'checked-in' : 'not-checked-in'"
       [title]="isCheckedToday() ? 'Already checked in today!' : 'Check in for today'">
       @if (isCheckedToday()) {

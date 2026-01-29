@@ -96,7 +96,7 @@ export class StatsComponent implements OnInit, OnDestroy {
       habits.forEach(habit => {
         if (habit.createdAt && date >= new Date(habit.createdAt)) {
           totalPossible++;
-          if (habit.checkIns && habit.checkIns[dateStr]) {
+          if (habit.checkIns && habit.checkIns.some(ci => new Date(ci.checkInDate).toISOString().slice(0, 10) === dateStr)) {
             totalCompleted++;
           }
         }
@@ -155,8 +155,9 @@ export class StatsComponent implements OnInit, OnDestroy {
     
     habits.forEach(habit => {
       if (habit.checkIns) {
-        Object.keys(habit.checkIns).forEach(dateStr => {
-          const day = new Date(dateStr).getDay();
+        habit.checkIns.forEach(ci => {
+          const checkInDate = new Date(ci.checkInDate);
+          const day = checkInDate.getDay();
           dayCounts[dayNames[day]] = (dayCounts[dayNames[day]] || 0) + 1;
         });
       }
@@ -201,7 +202,7 @@ export class StatsComponent implements OnInit, OnDestroy {
         const dateStr = date.toISOString().slice(0, 10);
         
         const dayTotal = this.habits().reduce((sum, habit) => 
-          sum + ((habit.checkIns && habit.checkIns[dateStr]) ? 1 : 0), 0
+          sum + (habit.checkIns?.some(ci => new Date(ci.checkInDate).toISOString().slice(0, 10) === dateStr) ? 1 : 0), 0
         );
         
         weekData.push(dayTotal);

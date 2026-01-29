@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
 
 from app.database import get_db, Habit, Reminder as ReminderModel
@@ -9,6 +9,9 @@ from app.schemas import Reminder
 from app.routers.auth import get_current_user
 
 router = APIRouter()
+
+def get_current_timestamp():
+    return int(datetime.utcnow().timestamp() * 1000)
 
 @router.get("", response_model=List[dict])
 async def get_reminders(
@@ -27,7 +30,8 @@ async def get_reminders(
                 "reminder": Reminder(
                     time=habit.reminder.time,
                     days=habit.reminder.days,
-                    window=habit.reminder.window
+                    window=habit.reminder.window,
+                    is_active=habit.reminder.is_active
                 )
             })
     
@@ -60,7 +64,8 @@ async def get_habit_reminder(
     return Reminder(
         time=habit.reminder.time,
         days=habit.reminder.days,
-        window=habit.reminder.window
+        window=habit.reminder.window,
+        is_active=habit.reminder.is_active
     )
 
 @router.put("/{habit_id}", response_model=Reminder)
@@ -88,6 +93,7 @@ async def update_habit_reminder(
         habit.reminder.days = reminder_data.days
         habit.reminder.window = reminder_data.window
         habit.reminder.is_active = True
+        habit.reminder.updated_at = get_current_timestamp()
     else:
         # Create new reminder
         reminder = ReminderModel(
@@ -96,7 +102,9 @@ async def update_habit_reminder(
             time=reminder_data.time,
             days=reminder_data.days,
             window=reminder_data.window,
-            is_active=True
+            is_active=True,
+            created_at=get_current_timestamp(),
+            updated_at=get_current_timestamp()
         )
         db.add(reminder)
     
@@ -158,6 +166,7 @@ async def toggle_reminder(
         )
     
     habit.reminder.is_active = not habit.reminder.is_active
+    habit.reminder.updated_at = get_current_timestamp()
     db.commit()
     
     return {

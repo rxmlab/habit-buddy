@@ -5,9 +5,18 @@ export interface Habit {
   categoryId?: string; // Optional - will be assigned automatically
   badge?: HabitBadge | null; // Current badge level
   color: string;
-  createdAt: string;
-  checkIns: Record<string, string>;
+  createdAt: number;
+  checkIns: CheckIn[];
   reminder?: Reminder | null;
+}
+
+export interface CheckIn {
+  id: string;
+  habitId: string;
+  checkInDate: number;
+  status: 'completed' | 'skipped' | 'failed';
+  note?: string;
+  createdAt: number;
 }
 
 export interface HabitBadge {

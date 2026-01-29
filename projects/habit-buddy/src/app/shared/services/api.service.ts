@@ -84,22 +84,33 @@ export class ApiService {
       throw new Error('User must be authenticated to check in habits');
     }
     
-    const body: { habit_id: string; check_in_date?: string } = { habit_id: habitId };
+    
+    const now = new Date();
+    let checkInDate = now.getTime(); // Default to now in ms
+    
     if (date) {
-      body.check_in_date = date;
+      // Parse YYYY-MM-DD string to timestamp
+      // Create date at noon to avoid timezone issues with day boundaries
+      checkInDate = new Date(date + 'T12:00:00').getTime();
     }
+
+    const body = { 
+      habit_id: habitId,
+      check_in_date: checkInDate,
+      status: 'completed'
+    };
     
     return this.http.post(`${this.API_BASE_URL}/api/habits/${habitId}/check-in`, body).pipe(
       catchError(this.handleError)
     );
   }
 
-  deleteCheckIn(habitId: string, date: string): Observable<void> {
+  deleteCheckIn(habitId: string, checkInId: string): Observable<void> {
     if (!this.authService.isAuthenticated()) {
       throw new Error('User must be authenticated to delete check-ins');
     }
     
-    return this.http.delete<void>(`${this.API_BASE_URL}/api/habits/${habitId}/check-in/${date}`).pipe(
+    return this.http.delete<void>(`${this.API_BASE_URL}/api/habits/${habitId}/check-in/${checkInId}`).pipe(
       catchError(this.handleError)
     );
   }

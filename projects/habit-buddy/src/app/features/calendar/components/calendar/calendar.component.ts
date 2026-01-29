@@ -1,15 +1,18 @@
 import { Component, OnInit, signal, computed, inject, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { HabitService, NotificationService } from '../../../../shared';
 import { DialogService } from '../../../../shared/services/dialog.service';
 import { Habit } from '../../../../shared/models/habit.model';
 import { LucideAngularModule, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Calendar, Target, TrendingUp, Plus, Check, CalendarDays } from 'lucide-angular';
+import { DATE_FORMATS } from '../../../../shared/config/date-formats.config';
+import { toLocalISODate } from '../../../../shared/utils/date.utils';
 
 @Component({
   selector: 'app-calendar',
   standalone: true,
   imports: [CommonModule, LucideAngularModule],
+  providers: [DatePipe],
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.scss'
 })
@@ -20,9 +23,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
   
   protected readonly habits = signal<Habit[]>([]);
 
+  private datePipe = inject(DatePipe);
+
   protected readonly calendarTitle = computed(() => {
     const dt = new Date(this.calendarYear(), this.calendarMonth(), 1);
-    const label = dt.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    const label = this.datePipe.transform(dt, DATE_FORMATS.monthYear) || '';
     
     if (this.calendarMode() === 'all') {
       return `All Habits - ${label}`;
@@ -46,7 +51,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     
     // Add days of the month
     for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = new Date(this.calendarYear(), this.calendarMonth(), d).toISOString().slice(0, 10);
+      const date = new Date(this.calendarYear(), this.calendarMonth(), d);
+      const dateStr = toLocalISODate(date);
       days.push({ day: d, date: dateStr, isEmpty: false });
     }
     
@@ -80,6 +86,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     // Periodic checks are centralized in NotificationService
     this.checkReminders();
+    
+    // Force refresh data to ensure calendar is up to date
+    this.habitService.refreshHabits();
   }
 
   ngOnDestroy(): void {}
@@ -124,18 +133,6 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return `${habit.title} - ${action} to view individual progress`;
   }
 
-  protected getDayDots(dateStr: string) {
-    return this.habits()
-      .filter(habit => habit.checkIns && habit.checkIns[dateStr])
-      .slice(0, 5)
-      .map(habit => ({ color: habit.color }));
-  }
-
-  protected isDayChecked(dateStr: string): boolean {
-    const habit = this.getSelectedHabit();
-    return habit ? !!(habit.checkIns && habit.checkIns[dateStr]) : false;
-  }
-
   protected getSelectedHabit(): Habit | undefined {
     if (this.calendarMode() === 'all') return undefined;
     return this.habits().find(h => h.id === this.calendarMode());
@@ -147,14 +144,31 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.calendarMonth.set(today.getMonth());
   }
 
+  protected getDayDots(dateStr: string) {
+    return this.habits()
+      .filter(habit => habit.checkIns && habit.checkIns.some(ci => toLocalISODate(new Date(ci.checkInDate)) === dateStr))
+      .slice(0, 5)
+      .map(habit => ({ color: habit.color }));
+  }
+
+  protected isDayChecked(dateStr: string): boolean {
+    const habit = this.getSelectedHabit();
+    return habit ? !!(habit.checkIns && habit.checkIns.some(ci => toLocalISODate(new Date(ci.checkInDate)) === dateStr)) : false;
+  }
+
+  // ...
+
   protected getMonthlyCompletionRate(): number {
     const daysInMonth = new Date(this.calendarYear(), this.calendarMonth() + 1, 0).getDate();
     let totalPossible = 0;
     let totalCompleted = 0;
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = new Date(this.calendarYear(), this.calendarMonth(), day).toISOString().slice(0, 10);
-      const dayCompleted = this.habits().some(habit => habit.checkIns && habit.checkIns[dateStr]);
+      const date = new Date(this.calendarYear(), this.calendarMonth(), day);
+      const dateStr = toLocalISODate(date);
+      const dayCompleted = this.habits().some(habit => 
+        habit.checkIns && habit.checkIns.some(ci => toLocalISODate(new Date(ci.checkInDate)) === dateStr)
+      );
       if (dayCompleted) totalCompleted++;
       totalPossible++;
     }
@@ -163,7 +177,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   protected getDayStatusClass(dateStr: string): string {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalISODate(new Date());
     const isToday = dateStr === today;
     const isPast = dateStr < today;
     const isFuture = dateStr > today;
@@ -175,7 +189,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   protected canToggleDay(dateStr: string): boolean {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalISODate(new Date());
     return dateStr === today;
   }
 
@@ -184,7 +198,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (!habit) return '';
 
     const isChecked = this.isDayChecked(dateStr);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalISODate(new Date());
     
     if (dateStr === today) {
       return isChecked ? `Mark ${habit.title} as not done for today` : `Mark ${habit.title} as done for today`;
@@ -200,9 +214,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (!habit) return '';
 
     const isChecked = this.isDayChecked(dateStr);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalISODate(new Date());
     const date = new Date(dateStr);
-    const dateLabel = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    const dateLabel = this.datePipe.transform(date, DATE_FORMATS.fullDate) || dateStr;
     
     if (dateStr === today) {
       return isChecked ? `Today, ${dateLabel}: ${habit.title} completed. Click to mark as not done.` : `Today, ${dateLabel}: ${habit.title} not completed. Click to mark as done.`;
@@ -214,7 +228,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   protected async onDayClick(dateStr: string): Promise<void> {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalISODate(new Date());
     if (dateStr !== today) {
       this.dialogService.showWarning('Only today can be toggled (no backfill).');
       return;
@@ -223,7 +237,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const habit = this.getSelectedHabit();
     if (!habit) return;
 
-    const result = await this.habitService.toggleCheckinToday(habit.id);
+    const result = await this.habitService.checkInToday(habit.id);
     if (result.success) {
       this.notificationService.playBell();
       this.notificationService.triggerConfetti();
