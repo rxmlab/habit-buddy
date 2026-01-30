@@ -108,21 +108,24 @@ class Reminder(Base):
 class Badge(Base):
     __tablename__ = "badges"
 
-    id = Column(String, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String, unique=True, nullable=False)
     name = Column(String, nullable=False)
     description = Column(String, nullable=False)
     icon = Column(String, nullable=False)
-    criteria = Column(JSON, nullable=False)
+    days_required = Column(Integer, nullable=False)
+    next_badge_id = Column(Integer, ForeignKey("badges.id"), nullable=True)
     
     # Relationships
     user_badges = relationship("UserBadge", back_populates="badge")
+    next_badge = relationship("Badge", remote_side=[id])
 
 class UserBadge(Base):
     __tablename__ = "user_badges"
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    badge_id = Column(String, ForeignKey("badges.id"), nullable=False)
+    badge_id = Column(Integer, ForeignKey("badges.id"), nullable=False)
     earned_at = Column(BigInteger, default=lambda: int(datetime.utcnow().timestamp() * 1000))
 
     # Relationships

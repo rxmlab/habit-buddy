@@ -25,7 +25,7 @@ export class HabitService {
   public habits$ = this.habitsSubject.asObservable();
   public habits = signal(this.habitsSubject.value);
 
-  public totalCompleted = computed(() => 
+  public totalCompleted = computed(() =>
     this.habits().reduce((sum, habit) => sum + (habit.checkIns?.length || 0), 0)
   );
 
@@ -50,15 +50,15 @@ export class HabitService {
   public weeklyTrend = computed((): WeeklyTrend => {
     const labels: string[] = [];
     const data: number[] = [];
-    
+
     // Last 7 days including today
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       labels.push(formatDate(d, DATE_FORMATS.weekday, 'en-US')); // Use standardized format
-      
+
       const dateStr = d.toISOString().slice(0, 10);
-      
+
       const dayTotal = this.habits().reduce((sum, habit) => {
         if (!habit.checkIns) return sum;
         // Check if any check-in matches this date
@@ -69,30 +69,30 @@ export class HabitService {
       }, 0);
       data.push(dayTotal);
     }
-    
+
     return { labels, data };
   });
 
   public monthlyTrend = computed((): MonthlyTrend => {
     const labels: string[] = [];
     const data: number[] = [];
-    
+
     // Get current month
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    
+
     // Get days in current month
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    
+
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(currentYear, currentMonth, day);
       const dateStr = date.toISOString().slice(0, 10);
       labels.push(day.toString());
-      
+
       const dayTotal = this.habits().reduce((sum, habit) => {
         if (!habit.checkIns) return sum;
-        const hasCheckIn = habit.checkIns.some(ci => 
+        const hasCheckIn = habit.checkIns.some(ci =>
           new Date(ci.checkInDate).toISOString().slice(0, 10) === dateStr
         );
         return sum + (hasCheckIn ? 1 : 0);
@@ -100,22 +100,22 @@ export class HabitService {
 
       data.push(dayTotal);
     }
-    
+
     return { labels, data };
   });
 
   public yearlyTrend = computed((): YearlyTrend => {
     const labels: string[] = [];
     const data: number[] = [];
-    
+
     for (let i = 11; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       labels.push(formatDate(d, DATE_FORMATS.monthYear, 'en-US')); // Use standardized format
-      
+
       const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
       const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-      
+
       let monthTotal = 0;
       for (const habit of this.habits()) {
         if (habit.checkIns) {
@@ -127,10 +127,10 @@ export class HabitService {
           }
         }
       }
-      
+
       data.push(monthTotal);
     }
-    
+
     return { labels, data };
   });
 
@@ -201,6 +201,7 @@ export class HabitService {
       daysTarget: 30,
       color: this.pickColor(this.habits().length),
       reminder: reminder || null
+
     };
 
     return this.apiService.createHabit(habitData).pipe(
@@ -212,7 +213,7 @@ export class HabitService {
 
   private getBadgeForProgress(completedDays: number): HabitBadge | null {
     const badgeConfig = getBadgeConfigForDays(completedDays);
-    
+
     return {
       level: badgeConfig.level,
       name: badgeConfig.name,
@@ -229,7 +230,7 @@ export class HabitService {
   }
 
   updateHabitReminder(id: string, reminder: Reminder | null): void {
-    const updatedHabits = this.habits().map(habit => 
+    const updatedHabits = this.habits().map(habit =>
       habit.id === id ? { ...habit, reminder } : habit
     );
     this.habitsSubject.next(updatedHabits);
@@ -244,10 +245,10 @@ export class HabitService {
     const todayDate = new Date();
     // Safety check: ensure checkIns is an array
     const checkIns = habit.checkIns || [];
-    
+
     // Check if already checked in
     const todayCheckIn = checkIns.find(ci => isSameDay(ci.checkInDate, todayDate));
-    
+
     if (todayCheckIn) {
       return { success: false, message: 'Already checked in today.' };
     }
@@ -261,8 +262,8 @@ export class HabitService {
     return new Promise((resolve) => {
       this.apiService.checkInHabit(habitId).subscribe({
         next: () => {
-           this.loadHabitsFromBackend();
-           resolve({ success: true, message: 'Checked in!' });
+          this.loadHabitsFromBackend();
+          resolve({ success: true, message: 'Checked in!' });
         },
         error: (err) => {
           resolve({ success: false, message: err.error?.detail || 'Check-in failed' });
@@ -307,16 +308,16 @@ export class HabitService {
   }
 
   calcStreaksForHabit(habit: Habit): HabitStats {
-     if (!habit.checkIns || habit.checkIns.length === 0) {
-        return { current: 0, longest: 0, total: 0, breaks: 0 };
-     }
+    if (!habit.checkIns || habit.checkIns.length === 0) {
+      return { current: 0, longest: 0, total: 0, breaks: 0 };
+    }
 
-     const dates = habit.checkIns
-        .map(ci => toLocalISODate(ci.checkInDate))
-        .sort()
-        .filter((v, i, a) => a.indexOf(v) === i); // unique
+    const dates = habit.checkIns
+      .map(ci => toLocalISODate(ci.checkInDate))
+      .sort()
+      .filter((v, i, a) => a.indexOf(v) === i); // unique
 
-     if (!dates.length) return { current: 0, longest: 0, total: 0, breaks: 0 };
+    if (!dates.length) return { current: 0, longest: 0, total: 0, breaks: 0 };
 
     // Logic similar to stats.py but in JS
     let longest = 0;
@@ -324,45 +325,45 @@ export class HabitService {
     let tempStreak = 1;
 
     for (let i = 1; i < dates.length; i++) {
-        const prev = new Date(dates[i-1]);
-        const curr = new Date(dates[i]);
-        const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 1) {
-            tempStreak++;
-        } else {
-            longest = Math.max(longest, tempStreak);
-            if (diffDays > 1) {
-                breaks++;
-            }
-            tempStreak = 1;
+      const prev = new Date(dates[i - 1]);
+      const curr = new Date(dates[i]);
+      const diffDays = Math.round((curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        tempStreak++;
+      } else {
+        longest = Math.max(longest, tempStreak);
+        if (diffDays > 1) {
+          breaks++;
         }
+        tempStreak = 1;
+      }
     }
     longest = Math.max(longest, tempStreak);
 
     // Current Streak
     let current = 0;
     let today = new Date();
-    today.setHours(0,0,0,0);
-    
+    today.setHours(0, 0, 0, 0);
+
     const lastCheckIn = new Date(dates[dates.length - 1]);
-    lastCheckIn.setHours(0,0,0,0);
+    lastCheckIn.setHours(0, 0, 0, 0);
 
     const diffToToday = Math.round((today.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60 * 24));
 
     if (diffToToday <= 1) {
-        // Streak is alive (today or yesterday checked in)
-        current = 1;
-        for (let i = dates.length - 2; i >= 0; i--) {
-            const curr = new Date(dates[i]);
-            const next = new Date(dates[i+1]);
-            const diff = Math.round((next.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24));
-            if (diff === 1) {
-                current++;
-            } else {
-                break;
-            }
+      // Streak is alive (today or yesterday checked in)
+      current = 1;
+      for (let i = dates.length - 2; i >= 0; i--) {
+        const curr = new Date(dates[i]);
+        const next = new Date(dates[i + 1]);
+        const diff = Math.round((next.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24));
+        if (diff === 1) {
+          current++;
+        } else {
+          break;
         }
+      }
     }
 
     return { current, longest, total: habit.checkIns.length, breaks };
@@ -389,16 +390,16 @@ export class HabitService {
     const today = new Date();
     const twoMonthsAgo = new Date();
     twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-    
+
     const generateCheckIns = (habitIndex: number, creationDate: number): CheckIn[] => {
       const checkIns: CheckIn[] = [];
       const startDate = new Date(creationDate);
       const totalDays = Math.floor((new Date().getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000));
-      
+
       for (let dayOffset = 0; dayOffset <= totalDays; dayOffset++) {
         const date = new Date(startDate.getTime() + dayOffset * 24 * 60 * 60 * 1000);
         const dayOfWeek = date.getDay();
-        
+
         let shouldCheckIn = false;
         switch (habitIndex) {
           case 0: shouldCheckIn = Math.random() < 0.8; break;
@@ -407,14 +408,14 @@ export class HabitService {
           case 3: shouldCheckIn = (dayOfWeek === 0 || dayOfWeek === 6) && Math.random() < 0.5; break;
           case 4: shouldCheckIn = Math.random() < 0.4; break;
         }
-        
+
         if (shouldCheckIn) {
           checkIns.push({
-              id: this.generateId(),
-              habitId: `sample-${habitIndex}`,
-              checkInDate: date.getTime(),
-              status: 'completed',
-              createdAt: date.getTime()
+            id: this.generateId(),
+            habitId: `sample-${habitIndex}`,
+            checkInDate: date.getTime(),
+            status: 'completed',
+            createdAt: date.getTime()
           });
         }
       }
@@ -431,7 +432,7 @@ export class HabitService {
 
     return habitsData.map((h, index) => {
       const randomTime = twoMonthsAgo.getTime() + Math.random() * (today.getTime() - twoMonthsAgo.getTime());
-      
+
       return {
         id: this.generateId(),
         title: h.title,
@@ -440,7 +441,9 @@ export class HabitService {
         color: h.color,
         createdAt: randomTime,
         checkIns: generateCheckIns(index, randomTime),
-        reminder: null
+        reminder: null,
+        badgeId: 1,
+        currentStreak: 0
       };
     });
   }

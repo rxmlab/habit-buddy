@@ -42,13 +42,13 @@
       <div class="stats-row">
         <!-- Total days stat - foundation info on left -->
         <div class="stat-item">
-          <div class="stat-value">{{ completedCount() }}</div>
+          <div class="stat-value">{{ daysSinceStart() }}</div>
           <div class="stat-label">Total Days</div>
         </div>
 
         <!-- Current streak stat - prominent achievement on right -->
         <div class="stat-item">
-          <div class="stat-value streak-value">{{ stats().current }}</div>
+          <div class="stat-value streak-value">{{ habit().currentStreak }}</div>
           <div class="stat-label">Day Streak</div>
         </div>
       </div>

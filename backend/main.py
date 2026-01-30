@@ -61,13 +61,14 @@ from app.routers.auth import get_current_user
 
 # --- ROUTERS ---
 
-from app.routers import habits, auth as auth_router, stats, reminders, categories
+from app.routers import habits, auth as auth_router, stats, reminders, categories, badges
 
 app.include_router(auth_router.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(habits.router, prefix="/api/habits", tags=["habits"], dependencies=[Depends(get_current_user)])
 app.include_router(categories.router, prefix="/api/categories", tags=["categories"], dependencies=[Depends(get_current_user)])
 app.include_router(stats.router, prefix="/api/stats", tags=["statistics"], dependencies=[Depends(get_current_user)])
 app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"], dependencies=[Depends(get_current_user)])
+app.include_router(badges.router, prefix="/api/badges", tags=["badges"], dependencies=[Depends(get_current_user)])
 
 # --- COMMON ENDPOINTS ---
 

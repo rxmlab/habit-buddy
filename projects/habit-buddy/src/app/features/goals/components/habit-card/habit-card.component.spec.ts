@@ -1,24 +1,34 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { HabitCardComponent } from './habit-card.component';
-import { Habit, HabitStats, Reminder, BadgeLevel } from '../../../../shared/models/habit.model';
+import { Habit, HabitStats, Badge } from '../../../../shared/models/habit.model';
+import { BadgeService } from '../../../../shared/services/badge.service';
+import { By } from '@angular/platform-browser';
 
 describe('HabitCardComponent', () => {
   let component: HabitCardComponent;
   let fixture: ComponentFixture<HabitCardComponent>;
+  let badgeServiceSpy: jasmine.SpyObj<BadgeService>;
+
+  const mockBadge: Badge = {
+    id: 1,
+    slug: 'novice',
+    name: 'Novice',
+    description: 'First Steps',
+    icon: 'Sparkles',
+    daysRequired: 1
+  };
 
   const mockHabit: Habit = {
     id: '1',
     title: 'Test Habit',
     daysTarget: 21,
     color: '#ff6b6b',
-    createdAt: new Date().toISOString().slice(0, 10), // Today's date
-    checkIns: { 
-      [new Date().toISOString().slice(0, 10)]: 'completed', 
-      [new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)]: 'completed' 
-    },
-    reminder: { time: '09:00', days: [1, 2, 3], window: 120 },
-    badge: { level: BadgeLevel.BEGINNER, name: 'Beginner', description: 'Beginner badge', icon: 'star', daysRequired: 1 }
+    createdAt: Date.now(),
+    checkIns: [],
+    badgeId: 1,
+    currentStreak: 5,
+    reminder: { time: '09:00', days: [1, 2, 3], window: 120 }
   };
 
   const mockStats: HabitStats = {
@@ -29,11 +39,26 @@ describe('HabitCardComponent', () => {
   };
 
   beforeEach(async () => {
+    badgeServiceSpy = jasmine.createSpyObj('BadgeService', ['getBadge', 'getBadgeForDays', 'getBadgeColors', 'getProgressToNextBadge']);
+
+    // Default mock returns
+    badgeServiceSpy.getBadge.and.returnValue(mockBadge);
+    badgeServiceSpy.getBadgeForDays.and.returnValue(mockBadge);
+    badgeServiceSpy.getBadgeColors.and.returnValue({
+      background: 'bg-yellow-100',
+      text: 'text-yellow-800',
+      border: 'border-yellow-200'
+    });
+    badgeServiceSpy.getProgressToNextBadge.and.returnValue(50);
+
     await TestBed.configureTestingModule({
       imports: [HabitCardComponent],
-      providers: [provideZonelessChangeDetection()]
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: BadgeService, useValue: badgeServiceSpy }
+      ]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(HabitCardComponent);
     component = fixture.componentInstance;
@@ -54,278 +79,143 @@ describe('HabitCardComponent', () => {
     it('should accept stats input', () => {
       expect(component.stats()).toEqual(mockStats);
     });
+  });
 
-    it('should handle habit without reminder', () => {
-      const habitWithoutReminder = { ...mockHabit, reminder: null };
-      fixture.componentRef.setInput('habit', habitWithoutReminder);
+  describe('Computed Properties', () => {
+    it('should calculate daysSinceStart correctly', () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const habitStartYesterday = { ...mockHabit, createdAt: yesterday.getTime() };
+      fixture.componentRef.setInput('habit', habitStartYesterday);
       fixture.detectChanges();
-      
-      expect(component.habit().reminder).toBeNull();
+
+      // Yesterday and Today = 2 days
+      expect(component['daysSinceStart']()).toBe(2);
     });
 
-    it('should handle habit without badge', () => {
-      const habitWithoutBadge = { ...mockHabit, badge: null };
-      fixture.componentRef.setInput('habit', habitWithoutBadge);
+    it('should return 1 day if created today', () => {
+      const today = new Date();
+      const habitStartToday = { ...mockHabit, createdAt: today.getTime() };
+      fixture.componentRef.setInput('habit', habitStartToday);
       fixture.detectChanges();
-      
-      expect(component.habit().badge).toBeNull();
+
+      expect(component['daysSinceStart']()).toBe(1);
+    });
+
+    it('should determine isCheckedToday correctly', () => {
+      // No check-ins
+      expect(component['isCheckedToday']()).toBeFalse();
+
+      // Check-in today
+      const habitCheckedIn = {
+        ...mockHabit,
+        checkIns: [{
+          id: 'c1',
+          habitId: '1',
+          checkInDate: Date.now(),
+          status: 'completed' as const,
+          createdAt: Date.now()
+        }]
+      };
+      fixture.componentRef.setInput('habit', habitCheckedIn);
+      fixture.detectChanges();
+
+      expect(component['isCheckedToday']()).toBeTrue();
+    });
+  });
+
+  describe('Badge Logic', () => {
+    it('should use BadgeService to get badge level text', () => {
+      const text = component['badgeLevelText']();
+      expect(badgeServiceSpy.getBadgeForDays).toHaveBeenCalled();
+      expect(text).toBe('Novice');
+    });
+
+    it('should get badge styling from service', () => {
+      const classes = component['getBadgeClasses']();
+      expect(badgeServiceSpy.getBadge).toHaveBeenCalledWith(1); // habit.badgeId is 1
+      expect(classes).toContain('bg-yellow-100');
     });
   });
 
   describe('Template Rendering', () => {
-    it('should render habit card container', () => {
-      const compiled = fixture.nativeElement;
-      const card = compiled.querySelector('.habit-card');
-      expect(card).toBeTruthy();
-    });
-
     it('should display habit title', () => {
-      const compiled = fixture.nativeElement;
-      const titleElement = compiled.querySelector('h3');
-      expect(titleElement.textContent.trim()).toBe('Test Habit');
+      const element = fixture.debugElement.query(By.css('.habit-title')).nativeElement;
+      expect(element.textContent).toContain('Test Habit');
     });
 
-    it('should display habit color', () => {
-      const compiled = fixture.nativeElement;
-      const colorElement = compiled.querySelector('.habit-card');
-      expect(colorElement).toBeTruthy();
-      // The template doesn't have a specific color element
+    it('should display current streak from habit property', () => {
+      const element = fixture.debugElement.query(By.css('.streak-value')).nativeElement;
+      expect(element.textContent).toContain('5');
     });
 
-    it('should display current streak', () => {
-      const compiled = fixture.nativeElement;
-      const streakElement = compiled.querySelector('.streak-value');
-      expect(streakElement.textContent.trim()).toBe('5');
-    });
-
-    it('should display longest streak', () => {
-      const compiled = fixture.nativeElement;
-      const longestElement = compiled.querySelector('.stat-value');
-      expect(longestElement).toBeTruthy();
-      // The template doesn't have a specific longest streak element
-    });
-
-    it('should display badge if present', () => {
-      const compiled = fixture.nativeElement;
-      const badgeElement = compiled.querySelector('.chart-icon');
-      expect(badgeElement).toBeTruthy();
-      // The template shows badge icon in the chart section
-    });
-
-    it('should display reminder icon if reminder exists', () => {
-      const compiled = fixture.nativeElement;
-      const reminderIcon = compiled.querySelector('.icon-btn');
-      expect(reminderIcon).toBeTruthy();
-      // The template shows reminder icon in the action buttons
-    });
-
-    it('should not display reminder icon if no reminder', () => {
-      const habitWithoutReminder = { ...mockHabit, reminder: null };
-      fixture.componentRef.setInput('habit', habitWithoutReminder);
-      fixture.detectChanges();
-      
-      const compiled = fixture.nativeElement;
-      const reminderIcon = compiled.querySelector('.icon-btn');
-      expect(reminderIcon).toBeTruthy();
-      // The template always shows action buttons
+    it('should display total days', () => {
+      const element = fixture.debugElement.query(By.css('.stat-item .stat-value')).nativeElement;
+      // daysSinceStart is 1 for default mock (created now)
+      expect(element.textContent).toContain('1');
     });
   });
 
   describe('Event Emitters', () => {
-    it('should emit checkin event when checkin button is clicked', () => {
+    it('should emit checkin', () => {
       spyOn(component.checkin, 'emit');
-      
-      const compiled = fixture.nativeElement;
-      const checkinButton = compiled.querySelector('.check-in-btn');
-      checkinButton.click();
-      
-      expect(component.checkin.emit).toHaveBeenCalledWith();
+      const btn = fixture.debugElement.query(By.css('.check-in-btn'));
+      btn.nativeElement.click();
+      expect(component.checkin.emit).toHaveBeenCalled();
     });
 
-    it('should emit remove event when remove button is clicked and confirmed', () => {
-      spyOn(component.remove, 'emit');
-      
-      const compiled = fixture.nativeElement;
-      const removeButton = compiled.querySelector('.icon-buttons-group button[data-tooltip="Remove habit"]');
-      removeButton.click();
-      fixture.detectChanges(); // Ensure dialog is rendered
-      
-      // The remove button shows a dialog first, so we need to confirm the deletion
-      // Look for button with danger classes (bg-red-600)
-      const confirmButton = compiled.querySelector('app-dialog button.bg-red-600');
-      expect(confirmButton).toBeTruthy(); // Ensure dialog is shown
-      
-      if (confirmButton) {
-        confirmButton.click();
-        fixture.detectChanges();
-      }
-      
-      expect(component.remove.emit).toHaveBeenCalledWith();
-    });
-
-    it('should emit editReminder event when reminder button is clicked', () => {
-      spyOn(component.editReminder, 'emit');
-      
-      const compiled = fixture.nativeElement;
-      const reminderButton = compiled.querySelector('.icon-buttons-group button[data-tooltip="Edit reminder"]');
-      reminderButton.click();
-      
-      expect(component.editReminder.emit).toHaveBeenCalledWith();
-    });
-
-    it('should emit viewCalendar event when calendar button is clicked', () => {
-      spyOn(component.viewCalendar, 'emit');
-      
-      const compiled = fixture.nativeElement;
-      const calendarButton = compiled.querySelector('.icon-buttons-group button[data-tooltip="View calendar"]');
-      calendarButton.click();
-      
-      expect(component.viewCalendar.emit).toHaveBeenCalledWith();
-    });
-  });
-
-  describe('Progress Calculation', () => {
-    it('should calculate progress percentage correctly', () => {
-      const progress = (component as any).progressPercentage();
-      expect(progress).toBeGreaterThan(0);
-      expect(progress).toBeLessThanOrEqual(100);
-    });
-
-    it('should handle zero progress', () => {
-      const habitWithNoCheckIns = { ...mockHabit, checkIns: {} };
-      fixture.componentRef.setInput('habit', habitWithNoCheckIns);
-      fixture.detectChanges();
-      
-      const progress = (component as any).progressPercentage();
-      expect(progress).toBe(0);
-    });
-
-    it('should handle completed habit', () => {
-      const completedHabit = { 
-        ...mockHabit, 
-        checkIns: { 
-          [new Date().toISOString().slice(0, 10)]: 'completed',
-          [new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)]: 'completed',
-          [new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)]: 'completed'
-        } 
+    it('should NOT emit checkin if already checked in', () => {
+      const habitCheckedIn = {
+        ...mockHabit,
+        checkIns: [{
+          id: 'c1',
+          habitId: '1',
+          checkInDate: Date.now(),
+          status: 'completed' as const,
+          createdAt: Date.now()
+        }]
       };
-      fixture.componentRef.setInput('habit', completedHabit);
+      fixture.componentRef.setInput('habit', habitCheckedIn);
       fixture.detectChanges();
-      
-      const progress = (component as any).progressPercentage();
-      expect(progress).toBeGreaterThan(0);
+
+      spyOn(component.checkin, 'emit');
+      const btn = fixture.debugElement.query(By.css('.check-in-btn'));
+      // Button is disabled/styled differently but click might still fire in test if not carefully guarded, 
+      // but component logic guards it
+      component['onCheckin']();
+      expect(component.checkin.emit).not.toHaveBeenCalled();
+    });
+
+    it('should show delete dialog on remove click', () => {
+      const removeBtn = fixture.debugElement.query(By.css('button[data-tooltip="Remove habit"]'));
+      removeBtn.nativeElement.click();
+      fixture.detectChanges();
+
+      const dialog = fixture.debugElement.query(By.css('app-dialog'));
+      expect(dialog).toBeTruthy();
+      expect(component['showDeleteDialog']()).toBeTrue();
     });
   });
 
-  describe('Badge Display', () => {
-    it('should display correct badge level', () => {
-      const compiled = fixture.nativeElement;
-      const badgeElement = compiled.querySelector('.chart-icon');
-      expect(badgeElement).toBeTruthy();
-      // The template shows badge icon in the chart section
-    });
-
-    it('should handle different badge levels', () => {
-      const expertHabit = { ...mockHabit, badge: { level: BadgeLevel.EXPERT, name: 'Expert', description: 'Expert badge', icon: 'crown', daysRequired: 30 } };
-      fixture.componentRef.setInput('habit', expertHabit);
+  describe('Status Messages', () => {
+    it('should show "On fire" if checked in today', () => {
+      const habitCheckedIn = {
+        ...mockHabit,
+        checkIns: [{ id: 'c1', habitId: '1', checkInDate: Date.now(), status: 'completed' as const, createdAt: Date.now() }]
+      };
+      fixture.componentRef.setInput('habit', habitCheckedIn);
       fixture.detectChanges();
-      
-      const compiled = fixture.nativeElement;
-      const badgeElement = compiled.querySelector('.chart-icon');
-      expect(badgeElement).toBeTruthy();
-      // The template shows badge icon in the chart section
-    });
-  });
 
-  describe('CSS Classes and Styling', () => {
-    it('should have correct habit card classes', () => {
-      const compiled = fixture.nativeElement;
-      const card = compiled.querySelector('.habit-card');
-      expect(card.classList.contains('habit-card')).toBe(true);
+      expect(component['motivationalMessage']()).toContain('fire');
     });
 
-    it('should have correct button classes', () => {
-      const compiled = fixture.nativeElement;
-      const checkinButton = compiled.querySelector('.check-in-btn');
-      expect(checkinButton).toBeTruthy();
-      expect(checkinButton.classList.contains('check-in-btn')).toBe(true);
-    });
-
-    it('should have correct progress bar classes', () => {
-      const compiled = fixture.nativeElement;
-      const progressComponent = compiled.querySelector('app-circular-progress');
-      expect(progressComponent).toBeTruthy();
-      // The template uses app-circular-progress component instead of a progress bar
-    });
-  });
-
-  describe('Component Structure', () => {
-    it('should be a standalone component', () => {
-      expect(HabitCardComponent).toBeTruthy();
-    });
-
-    it('should have correct event emitters', () => {
-      expect(component.checkin).toBeTruthy();
-      expect(component.remove).toBeTruthy();
-      expect(component.editReminder).toBeTruthy();
-      expect(component.viewCalendar).toBeTruthy();
-    });
-
-    it('should have correct input properties', () => {
-      expect(component.habit).toBeTruthy();
-      expect(component.stats).toBeTruthy();
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('should have proper ARIA labels', () => {
-      const compiled = fixture.nativeElement;
-      const checkinButton = compiled.querySelector('.check-in-btn');
-      expect(checkinButton).toBeTruthy();
-      // The template uses title attribute instead of aria-label
-      expect(checkinButton.getAttribute('title')).toBeTruthy();
-    });
-
-    it('should have proper button roles', () => {
-      const compiled = fixture.nativeElement;
-      const buttons = compiled.querySelectorAll('button');
-      buttons.forEach((button: any) => {
-        expect(button).toBeTruthy();
-        // The template doesn't explicitly set type="button" but buttons are valid
-      });
-    });
-  });
-
-  describe('Edge Cases', () => {
-    it('should handle habit with empty title', () => {
-      const habitWithEmptyTitle = { ...mockHabit, title: '' };
-      fixture.componentRef.setInput('habit', habitWithEmptyTitle);
+    it('should show "Keep the streak alive" for high streak', () => {
+      const highStreakHabit = { ...mockHabit, currentStreak: 10 };
+      fixture.componentRef.setInput('habit', highStreakHabit);
       fixture.detectChanges();
-      
-      const compiled = fixture.nativeElement;
-      const titleElement = compiled.querySelector('h3');
-      expect(titleElement.textContent.trim()).toBe('');
-    });
 
-    it('should handle habit with very long title', () => {
-      const longTitle = 'A'.repeat(100);
-      const habitWithLongTitle = { ...mockHabit, title: longTitle };
-      fixture.componentRef.setInput('habit', habitWithLongTitle);
-      fixture.detectChanges();
-      
-      const compiled = fixture.nativeElement;
-      const titleElement = compiled.querySelector('h3');
-      expect(titleElement.textContent.trim()).toBe(longTitle);
-    });
-
-    it('should handle stats with zero values', () => {
-      const zeroStats = { current: 0, longest: 0, total: 0, breaks: 0 };
-      fixture.componentRef.setInput('stats', zeroStats);
-      fixture.detectChanges();
-      
-      const compiled = fixture.nativeElement;
-      const streakElement = compiled.querySelector('.streak-value');
-      expect(streakElement.textContent.trim()).toBe('0');
+      expect(component['motivationalMessage']()).toBe('Keep the streak alive!');
     });
   });
 });

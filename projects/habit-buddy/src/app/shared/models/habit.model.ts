@@ -3,10 +3,11 @@ export interface Habit {
   title: string;
   daysTarget: number;
   categoryId?: string; // Optional - will be assigned automatically
-  badge?: HabitBadge | null; // Current badge level
+  badgeId: number | null; // Current badge level
   color: string;
   createdAt: number;
   checkIns: CheckIn[];
+  currentStreak: number;
   reminder?: Reminder | null;
 }
 
@@ -19,13 +20,27 @@ export interface CheckIn {
   createdAt: number;
 }
 
+export interface Badge {
+  id: number;
+  slug: string; // 'novice' | 'beginner' etc.
+  name: string;
+  description: string;
+  icon: string;
+  daysRequired: number;
+  nextBadgeId?: number;
+}
+
 export interface HabitBadge {
+  // Keeping level for compatibility, but might migrate to using Badge object directly
   level: BadgeLevel;
   name: string;
   description: string;
   icon: string;
   daysRequired: number;
   achievedAt?: string;
+
+  // Link to master badge data
+  badgeId?: number;
 }
 
 export enum BadgeLevel {

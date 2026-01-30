@@ -14,6 +14,55 @@ from app.routers.auth import get_current_user
 
 router = APIRouter()
 
+from app.database import Badge
+
+def get_badge_id_for_habit(db: Session, check_ins_count: int) -> int:
+    # This could be optimized by caching badges, but for now simple query is fine
+    # Or pass badges list if already loaded
+    badges = db.query(Badge).order_by(Badge.days_required.desc()).all()
+    for b in badges:
+        if check_ins_count >= b.days_required:
+            return b.id
+    # Fallback to lowest badge if no requirements met but list exists
+    if badges:
+        return badges[-1].id
+    
+    # Absolute fallback if no badges exist in DB (should be seeded)
+    return 1
+
+def calculate_streak(check_ins: List[CheckIn]) -> int:
+    if not check_ins:
+        return 0
+    
+    # Extract unique dates from check-ins
+    dates = set()
+    for ci in check_ins:
+        # Convert timestamp (ms) to date object (UTC)
+        dt = datetime.utcfromtimestamp(ci.check_in_date / 1000.0).date()
+        dates.add(dt)
+    
+    if not dates:
+        return 0
+        
+    today = datetime.utcnow().date()
+    yesterday = today - timedelta(days=1)
+    
+    # Determine start date for streak calculation
+    # Streak is active if check-in exists for today or yesterday
+    if today in dates:
+        current_date = today
+    elif yesterday in dates:
+        current_date = yesterday
+    else:
+        return 0
+        
+    streak = 0
+    while current_date in dates:
+        streak += 1
+        current_date -= timedelta(days=1)
+    
+    return streak
+
 def get_current_timestamp():
     return int(datetime.utcnow().timestamp() * 1000)
 
@@ -25,11 +74,33 @@ async def get_habits(
     """Get all habits for the current user"""
     habits = db.query(Habit).filter(Habit.user_id == current_user["uid"]).all()
     
+    # Load all badges primarily to calculate badge_id
+    # We can pass db to helper which queries individually or we can load once and pass list.
+    # Helper queries db each time which is N+1 but low volume. For optimization let's load once.
+    all_badges = db.query(Badge).order_by(Badge.days_required.desc()).all()
+
     result = []
     for habit in habits:
         # Get check-ins for this habit
         check_ins = db.query(CheckIn).filter(CheckIn.habit_id == habit.id).all()
+        completed_days = len(check_ins)
         
+        # Calculate streak
+        current_streak = calculate_streak(check_ins)
+
+        # Calculate badge_id
+        # We could use the helper but we have preloaded badges here for efficiency
+        badge_id = 1 # Default
+        if all_badges:
+             found = False
+             for b in all_badges:
+                 if completed_days >= b.days_required:
+                     badge_id = b.id
+                     found = True
+                     break
+             if not found:
+                 badge_id = all_badges[-1].id
+
         # Get reminder
         reminder = None
         if habit.reminder:
@@ -43,7 +114,13 @@ async def get_habits(
         # Get category
         category = None
         if habit.category:
-            category = CategoryResponse.model_validate(habit.category)
+            category = CategoryResponse(
+                id=habit.category.id,
+                name=habit.category.name,
+                color=habit.category.color,
+                icon=habit.category.icon,
+                created_at=habit.category.created_at
+            )
 
         result.append(HabitResponse(
             id=habit.id,
@@ -51,7 +128,9 @@ async def get_habits(
             days_target=habit.days_target,
             category_id=habit.category_id,
             category=category,
+            badge_id=badge_id,
             color=habit.color,
+            current_streak=current_streak,
             created_at=habit.created_at,
             check_ins=[CheckInResponse.model_validate(ci) for ci in check_ins],
             reminder=reminder
@@ -99,13 +178,18 @@ async def create_habit(
     db.refresh(habit)
     
     # Construct response manually to ensure all fields are present
+    # Initial badge (Novice) - assume 0 check-ins
+    badge_id = get_badge_id_for_habit(db, 0)
+
     return HabitResponse(
         id=habit.id,
         title=habit.title,
         days_target=habit.days_target,
         category_id=habit.category_id,
         category=None, # New habit relies on ID, relationship might not be loaded yet
+        badge_id=badge_id,
         color=habit.color,
+        current_streak=0, # New habit has no streak
         created_at=habit.created_at,
         check_ins=[],
         reminder=habit_data.reminder
@@ -147,13 +231,21 @@ async def get_habit(
     if habit.category:
         category = CategoryResponse.model_validate(habit.category)
     
+    # Calculate badge_id
+    badge_id = get_badge_id_for_habit(db, len(check_ins))
+    
+    # Calculate streak
+    current_streak = calculate_streak(check_ins)
+
     return HabitResponse(
         id=habit.id,
         title=habit.title,
         days_target=habit.days_target,
         category_id=habit.category_id,
         category=category,
+        badge_id=badge_id,
         color=habit.color,
+        current_streak=current_streak,
         created_at=habit.created_at,
         check_ins=[CheckInResponse.model_validate(ci) for ci in check_ins],
         reminder=reminder

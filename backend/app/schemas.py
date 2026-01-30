@@ -17,20 +17,19 @@ class CheckInStatus(str, Enum):
     FAILED = "failed"
 
 # Base Models
-class HabitBadge(BaseModel):
-    level: BadgeLevel
-    name: str
-    description: str
-    icon: str
-    days_required: int
-    achieved_at: Optional[str] = None
 
 class Badge(BaseModel):
-    id: str
+    id: int
+    slug: str
     name: str
     description: str
     icon: str
-    criteria: Dict[str, Any]
+    days_required: int = Field(..., alias="daysRequired")
+    next_badge_id: Optional[int] = Field(None, alias="nextBadgeId")
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
 
 class UserBadge(BaseModel):
     id: str
@@ -42,7 +41,7 @@ class Reminder(BaseModel):
     time: str  # HH:MM format
     days: List[int]  # Array of day numbers (0-6)
     window: int = 30  # Window in minutes
-    is_active: bool = True
+    is_active: bool = Field(True, alias="isActive")
 
 class Category(BaseModel):
     id: str
@@ -77,90 +76,103 @@ class CategoryCreate(BaseModel):
     icon: Optional[str] = None
 
 class CategoryResponse(Category):
-    created_at: int
+    created_at: int = Field(..., alias="createdAt")
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 # --- Habit ---
 class HabitCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     days_target: int = Field(..., ge=1, le=1000, alias="daysTarget")
-    category_id: Optional[str] = None
+    category_id: Optional[str] = Field(None, alias="categoryId")
     color: str = Field(..., pattern=r'^#[0-9A-Fa-f]{6}$')
     reminder: Optional[Reminder] = None
 
 class HabitUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=100)
     days_target: Optional[int] = Field(None, ge=1, le=1000, alias="daysTarget")
-    category_id: Optional[str] = None
+    category_id: Optional[str] = Field(None, alias="categoryId")
     color: Optional[str] = Field(None, pattern=r'^#[0-9A-Fa-f]{6}$')
     reminder: Optional[Reminder] = None
 
 class HabitResponse(BaseModel):
     id: str
     title: str
-    days_target: int
-    category_id: Optional[str] = None
+    days_target: int = Field(..., alias="daysTarget")
+    category_id: Optional[str] = Field(None, alias="categoryId")
     category: Optional[CategoryResponse] = None
-    badge: Optional[HabitBadge] = None
+    badge_id: int = Field(..., alias="badgeId")
     color: str
-    created_at: int
-    check_ins: List['CheckInResponse'] = [] 
+    current_streak: int = Field(0, alias="currentStreak")
+    created_at: int = Field(..., alias="createdAt")
+    check_ins: List['CheckInResponse'] = Field([], alias="checkIns") 
     reminder: Optional[Reminder] = None
     
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 # --- CheckIn ---
 class CheckInCreate(BaseModel):
-    habit_id: str
-    check_in_date: int # Timestamp in ms
+    habit_id: str = Field(..., alias="habitId")
+    check_in_date: int = Field(..., alias="checkInDate") # Timestamp in ms
     status: CheckInStatus = CheckInStatus.COMPLETED
     note: Optional[str] = None
 
 class CheckInResponse(BaseModel):
     id: str
-    habit_id: str
-    check_in_date: int
+    habit_id: str = Field(..., alias="habitId")
+    check_in_date: int = Field(..., alias="checkInDate")
     status: CheckInStatus
     note: Optional[str] = None
-    created_at: int
+    created_at: int = Field(..., alias="createdAt")
     
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 # --- User ---
 class UserResponse(BaseModel):
     id: str
     email: str
-    display_name: Optional[str] = None
-    avatar_url: Optional[str] = None
+    display_name: Optional[str] = Field(None, alias="displayName")
+    avatar_url: Optional[str] = Field(None, alias="avatarUrl")
     timezone: str
-    created_at: int
+    created_at: int = Field(..., alias="createdAt")
     
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 class UserUpdate(BaseModel):
-    display_name: Optional[str] = None
-    avatar_url: Optional[str] = None
+    display_name: Optional[str] = Field(None, alias="displayName")
+    avatar_url: Optional[str] = Field(None, alias="avatarUrl")
     timezone: Optional[str] = None
 
 class StatsResponse(BaseModel):
-    total_completed: int
-    average_completion: float
-    best_current_streak: int
-    best_longest_streak: int
-    habits_count: int
+    total_completed: int = Field(..., alias="totalCompleted")
+    average_completion: float = Field(..., alias="averageCompletion")
+    best_current_streak: int = Field(..., alias="bestCurrentStreak")
+    best_longest_streak: int = Field(..., alias="bestLongestStreak")
+    habits_count: int = Field(..., alias="habitsCount")
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
 
 class HabitStatsResponse(BaseModel):
-    habit_id: str
-    habit_title: str
+    habit_id: str = Field(..., alias="habitId")
+    habit_title: str = Field(..., alias="habitTitle")
     stats: HabitStats
-    weekly_trend: WeeklyTrend
-    monthly_trend: MonthlyTrend
-    yearly_trend: YearlyTrend
+    weekly_trend: WeeklyTrend = Field(..., alias="weeklyTrend")
+    monthly_trend: MonthlyTrend = Field(..., alias="monthlyTrend")
+    yearly_trend: YearlyTrend = Field(..., alias="yearlyTrend")
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
 
 # Error Models
 class ErrorResponse(BaseModel):

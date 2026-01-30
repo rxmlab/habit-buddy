@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Bell, CheckCircle, ChevronDown, Crown, Filter, Flame, Grid3X3, LucideAngularModule, Plus, Sparkles, Sprout, Star, Target, Trophy } from 'lucide-angular';
 import { BADGE_LEVELS, getBadgeConfigForDays } from '../../../../shared/config/badge-levels.config';
-import { BadgeLevel, Habit, Reminder } from '../../../../shared/models/habit.model';
+import { Habit, Reminder } from '../../../../shared/models/habit.model';
+import { BadgeService } from '../../../../shared/services/badge.service';
 import { DialogService } from '../../../../shared/services/dialog.service';
 import { HabitService } from '../../../../shared/services/habit.service';
 import { NotificationService } from '../../../../shared/services/notification.service';
@@ -22,16 +23,16 @@ import { HabitFormComponent } from '../habit-form/habit-form.component';
 export class GoalsComponent implements OnInit, OnDestroy {
   @ViewChild('reminderModal') reminderModal!: ReminderModalComponent;
   @ViewChild(HabitFormComponent) habitForm!: HabitFormComponent;
-  
+
   protected readonly habits = signal<Habit[]>([]);
-  
+
   // Filter state
   protected readonly activeFilter = signal<string>('all');
   protected readonly showFilters = signal<boolean>(false);
-  
+
   // Mobile form dialog state
   protected readonly showMobileFormDialog = signal<boolean>(false);
-  
+
   // Other filter options (Status, features, etc.)
   protected readonly otherFilterOptions = [
     { value: 'active', label: 'Active Streaks', count: 0, icon: 'Flame' },
@@ -39,12 +40,12 @@ export class GoalsComponent implements OnInit, OnDestroy {
     { value: 'recent', label: 'Recent (7 days)', count: 0, icon: 'Sparkles' },
     { value: 'completed-today', label: 'Done Today', count: 0, icon: 'CheckCircle' }
   ];
-  
+
   // Computed filtered habits
   protected readonly filteredHabits = computed(() => {
     const filter = this.activeFilter();
     const allHabits = this.habits();
-    
+
     switch (filter) {
       case 'all':
         return allHabits;
@@ -54,17 +55,17 @@ export class GoalsComponent implements OnInit, OnDestroy {
           return stats.current > 0;
         });
       case 'novice':
-        return allHabits.filter(habit => habit.badge?.level === BadgeLevel.NOVICE);
+        return allHabits.filter(habit => this.badgeService.getBadge(habit.badgeId!)?.slug === 'novice');
       case 'beginner':
-        return allHabits.filter(habit => habit.badge?.level === BadgeLevel.BEGINNER);
+        return allHabits.filter(habit => this.badgeService.getBadge(habit.badgeId!)?.slug === 'beginner');
       case 'intermediate':
-        return allHabits.filter(habit => habit.badge?.level === BadgeLevel.INTERMEDIATE);
+        return allHabits.filter(habit => this.badgeService.getBadge(habit.badgeId!)?.slug === 'intermediate');
       case 'advanced':
-        return allHabits.filter(habit => habit.badge?.level === BadgeLevel.ADVANCED);
+        return allHabits.filter(habit => this.badgeService.getBadge(habit.badgeId!)?.slug === 'advanced');
       case 'expert':
-        return allHabits.filter(habit => habit.badge?.level === BadgeLevel.EXPERT);
+        return allHabits.filter(habit => this.badgeService.getBadge(habit.badgeId!)?.slug === 'expert');
       case 'master':
-        return allHabits.filter(habit => habit.badge?.level === BadgeLevel.MASTER);
+        return allHabits.filter(habit => this.badgeService.getBadge(habit.badgeId!)?.slug === 'master');
       case 'with-reminders':
         return allHabits.filter(habit => habit.reminder !== null);
       case 'recent':
@@ -77,25 +78,25 @@ export class GoalsComponent implements OnInit, OnDestroy {
         });
       case 'completed-today':
         const today = new Date().toISOString().slice(0, 10);
-        return allHabits.filter(habit => 
-            habit.checkIns && habit.checkIns.some(ci => new Date(ci.checkInDate).toISOString().slice(0, 10) === today)
+        return allHabits.filter(habit =>
+          habit.checkIns && habit.checkIns.some(ci => new Date(ci.checkInDate).toISOString().slice(0, 10) === today)
         );
       default:
         return allHabits;
     }
   });
-  
+
   // Computed values for better performance
   protected readonly hasHabits = computed(() => this.habits().length > 0);
   protected readonly hasFilteredHabits = computed(() => this.filteredHabits().length > 0);
-  
+
   // Computed other filter options with counts
   protected readonly otherFilterOptionsWithCounts = computed(() => {
     const allHabits = this.habits();
-    
+
     return this.otherFilterOptions.map(option => {
       let count = 0;
-      
+
       switch (option.value) {
         case 'active':
           count = allHabits.filter(habit => {
@@ -117,12 +118,12 @@ export class GoalsComponent implements OnInit, OnDestroy {
           break;
         case 'completed-today':
           const today = new Date().toISOString().slice(0, 10);
-          count = allHabits.filter(habit => 
-              habit.checkIns && habit.checkIns.some(ci => new Date(ci.checkInDate).toISOString().slice(0, 10) === today)
+          count = allHabits.filter(habit =>
+            habit.checkIns && habit.checkIns.some(ci => new Date(ci.checkInDate).toISOString().slice(0, 10) === today)
           ).length;
           break;
       }
-      
+
       return { ...option, count };
     });
   });
@@ -130,12 +131,12 @@ export class GoalsComponent implements OnInit, OnDestroy {
   // Computed active filter label
   protected readonly activeFilterLabel = computed(() => {
     const currentFilter = this.activeFilter();
-    
+
     // Check badge levels first
     if (currentFilter === 'all') return 'All Goals';
     const badge = this.badgeLevelsConfig.find(b => b.level === currentFilter);
     if (badge) return badge.name;
-    
+
     // Check other filter options
     const otherOption = this.otherFilterOptionsWithCounts().find(option => option.value === currentFilter);
     return otherOption?.label || 'Active';
@@ -144,13 +145,13 @@ export class GoalsComponent implements OnInit, OnDestroy {
   // Computed active filter count
   protected readonly activeFilterCount = computed(() => {
     const currentFilter = this.activeFilter();
-    
+
     // Check badge levels first
     if (currentFilter === 'all') return this.getTotalHabitsCount();
     if (this.badgeLevelsConfig.find(b => b.level === currentFilter)) {
       return this.getBadgeFilterCount(currentFilter);
     }
-    
+
     // Check other filter options
     const otherOption = this.otherFilterOptionsWithCounts().find(option => option.value === currentFilter);
     return otherOption?.count || 0;
@@ -158,14 +159,17 @@ export class GoalsComponent implements OnInit, OnDestroy {
 
   // Simplified reminder modal state
   protected readonly selectedHabit = signal<Habit | null>(null);
-  
+
   // Interval management
   private reminderCheckInterval?: number;
 
   private habitService = inject(HabitService);
+  private badgeService = inject(BadgeService);
   private notificationService = inject(NotificationService);
   private router = inject(Router);
   private dialogService = inject(DialogService);
+
+  // habits = 
 
   constructor() {
     // Subscribe to habits changes
@@ -184,7 +188,7 @@ export class GoalsComponent implements OnInit, OnDestroy {
 
     // Force refresh from backend
     this.habitService.refreshHabits();
-    
+
     // Check reminders immediately
     this.checkReminders();
   }
@@ -213,11 +217,11 @@ export class GoalsComponent implements OnInit, OnDestroy {
   protected async onCheckin(habitId: string): Promise<void> {
     const result = await this.habitService.checkInToday(habitId);
     if (result.success) {
-        this.notificationService.playSuccessSound();
-        this.notificationService.triggerConfetti();
+      this.notificationService.playSuccessSound();
+      this.notificationService.triggerConfetti();
     } else {
-        console.error('Check-in failed:', result.message);
-        this.dialogService.showError(result.message || 'Failed to check in habit');
+      console.error('Check-in failed:', result.message);
+      this.dialogService.showError(result.message || 'Failed to check in habit');
     }
   }
 
@@ -243,7 +247,7 @@ export class GoalsComponent implements OnInit, OnDestroy {
 
   protected onViewCalendar(habitId: string): void {
     // Navigate to calendar view with specific habit filter
-    this.router.navigate(['/calendar'], { 
+    this.router.navigate(['/calendar'], {
       queryParams: { habitId: habitId }
     });
   }
@@ -295,16 +299,16 @@ export class GoalsComponent implements OnInit, OnDestroy {
   protected toggleFilters(): void {
     this.showFilters.set(!this.showFilters());
   }
-  
+
   // Mobile form dialog methods
   protected openMobileFormDialog(): void {
     this.showMobileFormDialog.set(true);
   }
-  
+
   protected closeMobileFormDialog(): void {
     this.showMobileFormDialog.set(false);
   }
-  
+
   protected onMobileHabitAdded(habit: { title: string; reminder?: Reminder | null }): void {
     this.onHabitAdded(habit);
     this.closeMobileFormDialog();
@@ -324,7 +328,7 @@ export class GoalsComponent implements OnInit, OnDestroy {
       'CheckCircle': CheckCircle,
       'target': Target  // Add lowercase version for compatibility
     };
-    
+
     const icon = iconMap[iconName];
     if (!icon) {
       console.warn(`Icon '${iconName}' not found in iconMap. Available icons:`, Object.keys(iconMap));
@@ -340,9 +344,9 @@ export class GoalsComponent implements OnInit, OnDestroy {
     // Better to include last checkin timestamp if available
     let lastTs = 0;
     if (checkInsLength > 0 && habit.checkIns) {
-        lastTs = habit.checkIns[checkInsLength - 1].checkInDate;
+      lastTs = habit.checkIns[checkInsLength - 1].checkInDate;
     }
-    return `${habit.id}-${checkInsLength}-${lastTs}`; 
+    return `${habit.id}-${checkInsLength}-${lastTs}`;
   }
 
   // Icon references
@@ -371,6 +375,6 @@ export class GoalsComponent implements OnInit, OnDestroy {
   }
 
   protected calcStreaksForHabit(habit: Habit): { current: number; longest: number } {
-     return this.habitService.calcStreaksForHabit(habit);
+    return this.habitService.calcStreaksForHabit(habit);
   }
 }
