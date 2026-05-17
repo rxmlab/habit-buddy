@@ -1,8 +1,9 @@
 services:
+  # Backend API (FastAPI)
   - type: web
-    name: habit-buddy
+    name: habit-buddy-api
     env: python
-    buildCommand: "./build.sh"
+    buildCommand: "pip install -r backend/requirements.txt"
     startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PYTHON_VERSION
@@ -10,11 +11,25 @@ services:
       - key: PROD_MODE
         value: "true"
       - key: ALLOWED_ORIGINS
-        value: "*"
+        # This allows the frontend to communicate with the backend
+        value: "https://habit-buddy-ui.onrender.com"
       - key: DATABASE_URL
         fromDatabase:
           name: habit-buddy-db
           property: connectionString
+
+  # Frontend UI (Angular)
+  - type: web
+    name: habit-buddy-ui
+    env: static
+    buildCommand: "npm install && npm run build"
+    # IMPORTANT: Angular 17+ puts the build output in the 'browser' subfolder
+    staticPublishPath: "./dist/abhyatus/browser"
+    routes:
+      # This handles Angular client-side routing (SPA fallback)
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
 
 databases:
   - name: habit-buddy-db

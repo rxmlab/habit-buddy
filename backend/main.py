@@ -103,34 +103,6 @@ def api(request):
     finally:
         loop.close()
 
-# --- FRONTEND SERVING (FOR RENDER DEPLOYMENT) ---
-
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-
-# Mount the Angular frontend if the dist directory exists
-# This assumes you run `npm run build` before starting the server
-frontend_dist = os.path.join(os.path.dirname(__file__), "..", "..", "dist", "abhyatus", "browser")
-frontend_dist = os.path.abspath(frontend_dist)
-
-if os.path.isdir(frontend_dist):
-    print(f"Serving frontend from {frontend_dist}")
-    
-    # Custom 404 handler for Angular routing (SPA)
-    @app.exception_handler(404)
-    async def custom_404_handler(request, exc):
-        # If the request is for the API, return a JSON 404
-        if request.url.path.startswith("/api/"):
-            return {"detail": "Not Found"}
-        # Otherwise, return the Angular index.html to handle client-side routing
-        index_path = os.path.join(frontend_dist, "index.html")
-        if os.path.exists(index_path):
-            return FileResponse(index_path)
-        return {"detail": "Frontend index.html not found"}
-
-    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
-else:
-    print(f"Frontend dist not found at {frontend_dist}. Running in API-only mode.")
 
 if __name__ == "__main__":
     import uvicorn
