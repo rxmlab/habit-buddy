@@ -1,4 +1,3 @@
-import functions_framework
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -66,42 +65,6 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "habitbuddy-api"}
-
-# --- FIREBASE FUNCTIONS ---
-
-@functions_framework.http
-def api(request):
-    """Firebase Functions HTTP entry point"""
-    import asyncio
-    
-    async def call_app():
-        scope = {
-            "type": "http",
-            "method": request.method,
-            "path": request.path,
-            "query_string": request.query_string.encode(),
-            "headers": [(k.lower(), v.encode()) for k, v in request.headers.items()],
-        }
-        
-        class MockRequest:
-            def __init__(self, scope, body):
-                self.scope = scope
-                self.body = body
-                self.method = scope["method"]
-                self.url = f"http://localhost{scope['path']}"
-                self.headers = dict(scope["headers"])
-        
-        mock_request = MockRequest(scope, request.get_data())
-        response = await app(mock_request.scope, mock_request.body)
-        return response
-    
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        response = loop.run_until_complete(call_app())
-        return response
-    finally:
-        loop.close()
 
 
 if __name__ == "__main__":
