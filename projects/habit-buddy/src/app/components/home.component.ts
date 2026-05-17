@@ -5,6 +5,7 @@ import { AuthService } from '../shared/services/auth.service';
 
 @Component({
   selector: 'app-home',
+  standalone: true,
   template: `
     <div class="min-h-screen bg-gray-50 flex items-center justify-center">
       <div class="text-center">
@@ -34,7 +35,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private authService: AuthService
-  ) {}
+  ) { }
 
   ngOnInit() {
     // Listen to authentication state

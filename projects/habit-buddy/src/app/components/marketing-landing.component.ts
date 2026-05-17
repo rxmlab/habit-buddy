@@ -1,8 +1,9 @@
-    import { Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-marketing-landing',
+  standalone: true,
   template: `
     <!-- Simple Marketing Landing Page -->
     <div class="min-h-screen bg-gray-50">
@@ -195,7 +196,7 @@ import { Router } from '@angular/router';
 export class MarketingLandingComponent {
   constructor(
     private router: Router
-  ) {}
+  ) { }
 
   startJourney() {
     // Navigate directly to auth page without console logs

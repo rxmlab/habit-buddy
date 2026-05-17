@@ -7,7 +7,7 @@ export const environment = {
   dateFormat: 'YYYY-MM-DD',
   timeFormat: 'HH:mm',
   locale: 'en-US',
-  apiUrl: 'https://vercel-backend-sage-pi.vercel.app', // Production API URL
+  apiUrl: '', // Production API URL
   firebase: {
     apiKey: "AIzaSyDxbXGbj7NwbIXTcYIyqmmUPsNzKL7O1W0",
     authDomain: "abhyatus.firebaseapp.com",

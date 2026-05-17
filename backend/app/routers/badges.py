@@ -10,8 +10,7 @@ router = APIRouter()
 
 @router.get("", response_model=List[BadgeSchema])
 async def get_badges(
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Get all configured badges (master list).

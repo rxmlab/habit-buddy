@@ -22,7 +22,6 @@ app = FastAPI(
 
 # Configure CORS
 # Get allowed origins from env, default to ["*"] for easier local dev if not set
-pass
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
 if allowed_origins_env:
     allowed_origins = allowed_origins_env.split(",")
@@ -68,7 +67,7 @@ app.include_router(habits.router, prefix="/api/habits", tags=["habits"], depende
 app.include_router(categories.router, prefix="/api/categories", tags=["categories"], dependencies=[Depends(get_current_user)])
 app.include_router(stats.router, prefix="/api/stats", tags=["statistics"], dependencies=[Depends(get_current_user)])
 app.include_router(reminders.router, prefix="/api/reminders", tags=["reminders"], dependencies=[Depends(get_current_user)])
-app.include_router(badges.router, prefix="/api/badges", tags=["badges"], dependencies=[Depends(get_current_user)])
+app.include_router(badges.router, prefix="/api/badges", tags=["badges"])
 
 # --- COMMON ENDPOINTS ---
 
