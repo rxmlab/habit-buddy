@@ -7,5 +7,5 @@ export const environment = {
   dateFormat: 'YYYY-MM-DD',
   timeFormat: 'HH:mm',
   locale: 'en-US',
-  apiUrl: '' // Production API URL
+  apiUrl: 'https://habit-buddy-80zv.onrender.com' // Production API URL
 };
