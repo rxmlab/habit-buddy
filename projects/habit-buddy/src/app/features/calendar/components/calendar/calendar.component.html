@@ -33,12 +33,12 @@
         @if (calendarMode() === 'all') {
           <span class="flex items-center gap-1">
             <lucide-icon [img]="CalendarIcon" size="14" class="text-blue-500"></lucide-icon>
-            <span>View all habits • Tap habits to toggle check-ins</span>
+            <span>View all habits • Read only</span>
           </span>
         } @else {
           <span class="flex items-center gap-1">
             <lucide-icon [img]="TargetIcon" size="14" class="text-green-500"></lucide-icon>
-            <span>Single habit mode • Tap today to toggle</span>
+            <span>Single habit mode • Read only</span>
           </span>
         }
       </div>
@@ -52,12 +52,12 @@
           @if (calendarMode() === 'all') {
             <span class="flex items-center gap-2">
               <lucide-icon [img]="CalendarIcon" size="16" class="text-blue-500"></lucide-icon>
-              View all habits • Click individual habits to toggle daily check-ins
+              View all habits (Read-only)
             </span>
           } @else {
             <span class="flex items-center gap-2">
               <lucide-icon [img]="TargetIcon" size="16" class="text-green-500"></lucide-icon>
-              Single habit mode • Click today's date to toggle check-in
+              Single habit mode (Read-only)
             </span>
           }
         </div>
@@ -216,24 +216,20 @@
             [class]="'calendar-day all-mode h-12 sm:h-16 md:h-20 lg:h-24 ' + getDayStatusClass(day.date)">
             <div class="day-content">
               <div class="day-number">{{ day.day }}</div>
-              <div class="habit-dots">
-                @for (dot of getDayDots(day.date); track dot) {
-                  <div 
-                    class="habit-dot"
-                    [style.background]="dot.color || '#e5e7eb'"></div>
+              <div class="day-status">
+                @if (getCompletedCount(day.date) > 0) {
+                  <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-100/50 px-1.5 py-0.5 rounded border border-emerald-200/50 flex items-center gap-0.5 mt-auto">
+                    <lucide-icon [img]="CheckIcon" size="10"></lucide-icon>
+                    {{ getCompletedCount(day.date) }}
+                  </span>
                 }
               </div>
-              @if (getDayDots(day.date).length > 3) {
-                <div class="more-dots">+{{ getDayDots(day.date).length - 3 }}</div>
-              }
             </div>
           </div>
         } @else {
-          <button 
+          <div 
             class="calendar-day single-mode h-12 sm:h-16 md:h-20 lg:h-24"
             [class]="'calendar-day single-mode h-12 sm:h-16 md:h-20 lg:h-24 ' + getDayStatusClass(day.date)"
-            [disabled]="!getSelectedHabit() || !canToggleDay(day.date)"
-            (click)="onDayClick(day.date)"
             [title]="getDayTooltip(day.date)"
             [aria-label]="getDayAriaLabel(day.date)">
             <div class="day-content">
@@ -241,12 +237,10 @@
               <div class="day-status">
                 @if (isDayChecked(day.date)) {
                   <lucide-icon [img]="CheckIcon" size="12" class="sm:w-4 sm:h-4 text-white"></lucide-icon>
-                } @else if (canToggleDay(day.date)) {
-                  <lucide-icon [img]="PlusIcon" size="10" class="sm:w-3 sm:h-3 text-slate-400"></lucide-icon>
                 }
               </div>
             </div>
-          </button>
+          </div>
         }
       }
     </div>

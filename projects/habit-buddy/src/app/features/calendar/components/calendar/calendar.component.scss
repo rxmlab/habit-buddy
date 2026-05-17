@@ -99,18 +99,20 @@
     
     &.past {
       background-color: #f8fafc;
-      
-      &.single-mode {
-        &.checked {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
-        }
-      }
     }
     
     &.future {
       background-color: #f1f5f9;
       opacity: 0.7;
+    }
+
+    &.missed {
+      background: #e5e7eb;
+      border-color: #d1d5db;
+      
+      .day-number {
+        color: #6b7280;
+      }
     }
     
     .day-content {
@@ -136,41 +138,22 @@
     
     // All mode specific styles
     &.all-mode {
-      .habit-dots {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.125rem;
-        margin-top: 0.25rem;
-        
-        .habit-dot {
-          width: 0.5rem;
-          height: 0.5rem;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-      }
-      
-      .more-dots {
-        font-size: 0.625rem;
-        color: #64748b;
-        font-weight: 500;
-        margin-top: 0.125rem;
-      }
+      // Styles for all-mode count display are handled by utility classes
     }
     
     // Single mode specific styles
     &.single-mode {
       &.checked {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        background: #22c55e;
         color: white;
-        border-color: #059669;
+        border-color: #16a34a;
         
         .day-number {
           color: white;
         }
       }
       
-      &:hover:not(:disabled):not(.checked) {
+      &:hover:not(:disabled):not(.checked):not(.missed) {
         background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
         border-color: #d1d5db;
       }
@@ -199,16 +182,6 @@
         font-weight: 600;
       }
       
-      .habit-dot {
-        width: 0.25rem;
-        height: 0.25rem;
-      }
-      
-      .more-dots {
-        font-size: 0.5rem;
-        margin-top: 0.125rem;
-      }
-      
       // Single mode mobile adjustments
       &.single-mode {
         .day-status {
@@ -230,11 +203,6 @@
   .calendar-grid {
     .calendar-day {
       min-height: 4rem;
-      
-      .habit-dot {
-        width: 0.375rem;
-        height: 0.375rem;
-      }
     }
   }
 }
@@ -243,11 +211,6 @@
   .calendar-grid {
     .calendar-day {
       min-height: 5rem;
-      
-      .habit-dot {
-        width: 0.5rem;
-        height: 0.5rem;
-      }
     }
   }
 }
@@ -256,11 +219,6 @@
   .calendar-grid {
     .calendar-day {
       min-height: 6rem;
-      
-      .habit-dot {
-        width: 0.625rem;
-        height: 0.625rem;
-      }
     }
   }
 }

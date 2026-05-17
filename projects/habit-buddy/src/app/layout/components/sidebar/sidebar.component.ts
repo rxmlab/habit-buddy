@@ -9,6 +9,7 @@ import {
   Clock,
   Settings,
   LogOut,
+  Shield,
 } from 'lucide-angular';
 import { AuthService } from '../../../shared/services/auth.service';
 import { UserService } from '../../../shared/services/user.service';
@@ -32,6 +33,7 @@ export class SidebarComponent implements OnInit {
   protected readonly ClockIcon = Clock;
   protected readonly SettingsIcon = Settings;
   protected readonly LogOutIcon = LogOut;
+  protected readonly ShieldIcon = Shield;
 
   protected readonly isAuthenticated = signal(false);
   
@@ -67,7 +69,7 @@ export class SidebarComponent implements OnInit {
   async logout(): Promise<void> {
     try {
       await this.authService.signOut();
-      this.router.navigate(['/marketing']);
+      this.router.navigate(['/auth']);
     } catch (error) {
       console.error('Error during logout:', error);
     }

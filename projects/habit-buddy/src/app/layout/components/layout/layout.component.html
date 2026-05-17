@@ -1,3 +1,4 @@
+@if (isAuthenticated()) {
 <div class="h-screen flex flex-col md:flex-row">
   <!-- Sidebar (desktop only) -->
   <app-sidebar class="hidden md:flex md:flex-col w-72 md:h-full" />
@@ -37,8 +38,6 @@
   (buttonClick)="onGlobalDialogAction($event)">
 </app-dialog>
 
-
-
 <!-- Reminder Dialog -->
 <app-reminder-dialog
   [isOpen]="notificationService.showReminderDialog"
@@ -48,3 +47,7 @@
   (markAsDone)="onMarkHabitAsDone($event)"
   (snooze)="onSnoozeReminder($event)">
 </app-reminder-dialog>
+} @else {
+  <!-- For unauthenticated users, just show the router outlet directly (e.g. login page) -->
+  <router-outlet />
+}

@@ -6,8 +6,8 @@
   "background_color": "#f8fafc",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "scope": "/abhyatus/",
-  "start_url": "/abhyatus/",
+  "scope": "./",
+  "start_url": "./",
   "lang": "en",
   "dir": "ltr",
   "categories": ["productivity", "health", "lifestyle", "education", "mindfulness"],
@@ -80,7 +80,7 @@
       "name": "Add Habit",
       "short_name": "Add Habit",
       "description": "Quickly add a new habit to your practice",
-      "url": "/abhyatus/goals?action=add",
+      "url": "./#/goals?action=add",
       "icons": [
         {
           "src": "logo/shortcut-add.png",
@@ -92,7 +92,7 @@
       "name": "Today's Practice",
       "short_name": "Today",
       "description": "View and complete today's habits",
-      "url": "/abhyatus/goals?filter=today",
+      "url": "./#/goals?filter=today",
       "icons": [
         {
           "src": "logo/shortcut-today.png",

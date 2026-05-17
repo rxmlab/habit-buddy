@@ -1,14 +1,11 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './shared/guards/auth.guard';
+import { AdminGuard } from './shared/guards/admin.guard';
 
 export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./components/home.component').then(m => m.HomeComponent)
-  },
-  {
-    path: 'marketing',
-    loadComponent: () => import('./components/marketing-landing.component').then(m => m.MarketingLandingComponent)
   },
   {
     path: 'auth',
@@ -38,6 +35,11 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'admin',
+    loadComponent: () => import('./features/admin/components/admin-dashboard.component').then(m => m.AdminDashboardComponent),
+    canActivate: [AuthGuard, AdminGuard]
   },
   {
     path: '**',

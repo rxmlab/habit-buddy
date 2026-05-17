@@ -35,6 +35,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     display_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=True)  # For native auth
+    role = Column(String, default="user", nullable=False)
     avatar_url = Column(String, nullable=True)
     timezone = Column(String, default="UTC")
     created_at = Column(BigInteger, default=lambda: int(datetime.utcnow().timestamp() * 1000))

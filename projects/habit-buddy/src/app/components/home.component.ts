@@ -46,8 +46,8 @@ export class HomeComponent implements OnInit, OnDestroy {
           // User is authenticated - go directly to goals
           this.router.navigate(['/goals']);
         } else {
-          // User is not authenticated - always show marketing page
-          this.router.navigate(['/marketing']);
+          // User is not authenticated - redirect to login page
+          this.router.navigate(['/auth']);
         }
       });
   }

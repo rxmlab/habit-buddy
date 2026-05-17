@@ -6,6 +6,8 @@ import { BottomNavComponent, DialogComponent, ReminderDialogComponent, Notificat
 import { GlobalHelpComponent } from '../../../shared/components/global-help/global-help.component';
 import { DialogService } from '../../../shared/services/dialog.service';
 import { HeaderComponent } from '../header/header.component';
+import { AuthService } from '../../../shared/services/auth.service';
+import { signal, OnInit } from '@angular/core';
 
 @Component({
   selector: 'app-layout',
@@ -14,10 +16,19 @@ import { HeaderComponent } from '../header/header.component';
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss'
 })
-export class LayoutComponent {
+export class LayoutComponent implements OnInit {
   protected dialogService = inject(DialogService);
   protected notificationService = inject(NotificationService);
   protected habitService = inject(HabitService);
+  protected authService = inject(AuthService);
+  
+  protected isAuthenticated = signal(false);
+
+  ngOnInit() {
+    this.authService.authUser$.subscribe(() => {
+      this.isAuthenticated.set(this.authService.isAuthenticated());
+    });
+  }
 
   protected onGlobalDialogAction(action: string): void {
     this.dialogService.close();

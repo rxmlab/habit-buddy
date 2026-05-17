@@ -144,11 +144,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.calendarMonth.set(today.getMonth());
   }
 
-  protected getDayDots(dateStr: string) {
-    return this.habits()
-      .filter(habit => habit.checkIns && habit.checkIns.some(ci => toLocalISODate(new Date(ci.checkInDate)) === dateStr))
-      .slice(0, 5)
-      .map(habit => ({ color: habit.color }));
+  protected getCompletedCount(dateStr: string): number {
+    return this.habits().filter(habit => habit.checkIns && habit.checkIns.some(ci => toLocalISODate(new Date(ci.checkInDate)) === dateStr)).length;
   }
 
   protected isDayChecked(dateStr: string): boolean {
@@ -182,10 +179,26 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const isPast = dateStr < today;
     const isFuture = dateStr > today;
 
-    if (isToday) return 'today';
-    if (isPast) return 'past';
-    if (isFuture) return 'future';
-    return 'current';
+    let statusClass = '';
+    if (isToday) statusClass = 'today';
+    else if (isPast) statusClass = 'past';
+    else if (isFuture) statusClass = 'future';
+    else statusClass = 'current';
+
+    if (this.calendarMode() !== 'all') {
+      if (this.isDayChecked(dateStr)) {
+        statusClass += ' checked';
+      } else if (isPast) {
+        statusClass += ' missed';
+      }
+    } else {
+      // In 'all' mode, if it's in the past and no habits were completed
+      if (isPast && this.getCompletedCount(dateStr) === 0) {
+        statusClass += ' missed';
+      }
+    }
+
+    return statusClass;
   }
 
   protected canToggleDay(dateStr: string): boolean {
@@ -201,11 +214,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const today = toLocalISODate(new Date());
     
     if (dateStr === today) {
-      return isChecked ? `Mark ${habit.title} as not done for today` : `Mark ${habit.title} as done for today`;
+      return isChecked ? `${habit.title} was completed today` : `${habit.title} is not completed today`;
     } else if (dateStr < today) {
       return isChecked ? `${habit.title} was completed on this day` : `${habit.title} was not completed on this day`;
     } else {
-      return `Future date - ${habit.title} cannot be modified`;
+      return `Future date`;
     }
   }
 
@@ -219,11 +232,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const dateLabel = this.datePipe.transform(date, DATE_FORMATS.fullDate) || dateStr;
     
     if (dateStr === today) {
-      return isChecked ? `Today, ${dateLabel}: ${habit.title} completed. Click to mark as not done.` : `Today, ${dateLabel}: ${habit.title} not completed. Click to mark as done.`;
+      return isChecked ? `Today, ${dateLabel}: ${habit.title} completed.` : `Today, ${dateLabel}: ${habit.title} not completed.`;
     } else if (dateStr < today) {
       return `${dateLabel}: ${habit.title} ${isChecked ? 'completed' : 'not completed'}`;
     } else {
-      return `${dateLabel}: Future date, cannot modify ${habit.title}`;
+      return `${dateLabel}: Future date`;
     }
   }
 

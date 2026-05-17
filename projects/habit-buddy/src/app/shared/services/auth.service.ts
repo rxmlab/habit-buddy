@@ -80,7 +80,8 @@ export class AuthService {
           uid: response.user.uid,
           email: response.user.email,
           displayName: response.user.displayName || response.user.name,
-          emailVerified: true
+          emailVerified: true,
+          isAdmin: response.user.isAdmin
       };
       
       this.currentToken = response.access_token;

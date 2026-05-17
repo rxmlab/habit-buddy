@@ -57,7 +57,7 @@ export class HeaderComponent {
     try {
       this.closeDropdown();
       await this.authService.signOut();
-      this.router.navigate(['/marketing']);
+      this.router.navigate(['/auth']);
     } catch (error) {
       console.error('Error during logout:', error);
     }

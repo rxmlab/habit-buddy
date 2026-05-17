@@ -76,7 +76,8 @@ async def signup(user_data: UserAuth, db: Session = Depends(get_db)):
         id=str(uuid.uuid4()),
         email=user_data.email,
         hashed_password=get_password_hash(user_data.password),
-        display_name=user_data.email.split("@")[0]
+        display_name=user_data.email.split("@")[0],
+        role="user"
     )
     db.add(new_user)
     db.commit()
@@ -95,7 +96,8 @@ async def signup(user_data: UserAuth, db: Session = Depends(get_db)):
         "user": {
             "uid": new_user.id,
             "email": new_user.email,
-            "displayName": new_user.display_name
+            "displayName": new_user.display_name,
+            "isAdmin": new_user.role == "admin"
         }
     }
 
@@ -123,7 +125,8 @@ async def login(user_data: UserAuth, db: Session = Depends(get_db)):
         "user": {
             "uid": user.id,
             "email": user.email,
-            "displayName": user.display_name
+            "displayName": user.display_name,
+            "isAdmin": user.role == "admin"
         }
     }
 
@@ -160,7 +163,8 @@ async def get_current_user(
         return {
             "uid": user.id,
             "email": user.email,
-            "name": user.display_name
+            "name": user.display_name,
+            "isAdmin": user.role == "admin"
         }
         
     except JWTError as e:
@@ -189,8 +193,18 @@ async def get_user_profile(current_user: dict = Depends(get_current_user), db: S
         "id": user.id, 
         "email": user.email, 
         "display_name": user.display_name, 
-        "created_at": user.created_at
+        "created_at": user.created_at,
+        "isAdmin": user.role == "admin"
     }
+
+async def get_current_admin(current_user: dict = Depends(get_current_user)):
+    """Dependency for admin-only endpoints"""
+    if not current_user.get("isAdmin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
 
 @router.post("/verify")
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
