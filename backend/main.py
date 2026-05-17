@@ -1,7 +1,7 @@
 import functions_framework
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-import firebase_admin
+
 import os
 from dotenv import load_dotenv
 
@@ -36,20 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Firebase Admin SDK
-if not firebase_admin._apps:
-    try:
-        firebase_admin.initialize_app()
-        if DEV_MODE:
-            print(" Running in DEV MODE - PostgreSQL database, auth tokens required")
-        else:
-            print(" Running in PRODUCTION MODE - PostgreSQL database, auth tokens required")
-    except Exception as e:
-        if DEV_MODE:
-            print(f" Firebase initialization failed in dev mode: {e}")
-            print("   Continuing - auth tokens will still be required")
-        else:
-            raise
+
 
 # Import database and create tables
 from app.database import engine, Base

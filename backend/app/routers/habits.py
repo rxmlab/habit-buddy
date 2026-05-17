@@ -1,21 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List
 import uuid
-from datetime import datetime, timedelta, date as datetime_date
-import hashlib
+from datetime import datetime, timedelta
 
-from app.database import get_db, Habit, CheckIn, Reminder as ReminderModel, User, Category
+from app.database import get_db, Habit, CheckIn, Reminder as ReminderModel, Category, Badge
 from app.schemas import (
     HabitCreate, HabitUpdate, HabitResponse, CheckInCreate, CheckInResponse,
-    Reminder, CheckInStatus, CategoryResponse
+    Reminder, CategoryResponse
 )
 from app.routers.auth import get_current_user
 
 router = APIRouter()
-
-from app.database import Badge
-
 def get_badge_id_for_habit(db: Session, check_ins_count: int) -> int:
     # This could be optimized by caching badges, but for now simple query is fine
     # Or pass badges list if already loaded
@@ -356,17 +352,6 @@ async def check_in_habit(
     
     # Use provided date or current date
     check_in_ts = check_in_data.check_in_date or get_current_timestamp()
-    
-    # Since we use timestamps, duplicates are technically exact ms matches.
-    # To prevent multiple check-ins per day, we need logic to check if a check-in exists for this "day".
-    # Converting TS to date depends on timezone. The User has a timezone field now.
-    # For now, let's just check for exact timestamp collision? 
-    # Or strict "one per day" rule might be flexible now with detailed check-ins.
-    # The requirement didn't specify strict one-per-day enforcement with the new schema, but it's a good habit app practice.
-    # However, simpler implementation is allowing multiple or checking exact range if needed.
-    # Let's align with the "Enhanced Check-ins" (status, note). Maybe multiple notes per day are allowed?
-    # I'll enable multiple per day for now unless it conflicts effectively. If I want to enforce uniqueness, I'd need complex day boundary logic with TZ.
-    # I'll rely on client to send unique timestamps.
     
     # Create check-in
     check_in = CheckIn(

@@ -31,7 +31,7 @@
     "@angular/platform-browser": "^20.3.2",
     "@angular/router": "^20.3.2",
     "@angular/service-worker": "^20.2.0",
-    "@types/d3": "^7.4.3",
+
     "d3": "^7.9.0",
     "firebase": "^11.10.0",
     "lucide-angular": "^0.544.0",
@@ -46,6 +46,7 @@
     "@types/node": "^20.17.19",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
+    "@types/d3": "^7.4.3",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from firebase_admin import auth
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 import logging
@@ -18,8 +17,7 @@ security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
 # Configuration
-PROD_MODE = os.getenv("PROD_MODE", "false").lower() == "true"
-SECRET_KEY = "your-secret-key-change-this-in-production"
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
@@ -39,7 +37,13 @@ class Token(BaseModel):
 # --- HELPER FUNCTIONS ---
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    if not hashed_password:
+        return False
+    from passlib.exc import UnknownHashError
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except UnknownHashError:
+        return False
 
 def get_password_hash(password):
     return pwd_context.hash(password)
@@ -99,7 +103,7 @@ async def signup(user_data: UserAuth, db: Session = Depends(get_db)):
 async def login(user_data: UserAuth, db: Session = Depends(get_db)):
     """Native Login"""
     user = db.query(User).filter(User.email == user_data.email).first()
-    if not user or not user.hashed_password or not verify_password(user_data.password, user.hashed_password):
+    if not user or not verify_password(user_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -127,7 +131,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    """Get current user - supports both Firebase and Native JWT"""
+    """Get current user - Native JWT"""
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -136,44 +140,22 @@ async def get_current_user(
         )
     
     token = credentials.credentials
-    user_id = None
-    email = None
     
     try:
-        # 1. Try Native JWT first (fastest)
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            user_id = payload.get("sub")
-            email = payload.get("email")
-            if user_id is None:
-                raise JWTError("Invalid token payload")
-        except JWTError:
-            # 2. Fallback to Firebase (only if not a valid native token)
-            try:
-                decoded_token = auth.verify_id_token(token)
-                user_id = decoded_token["uid"]
-                email = decoded_token.get("email")
-            except Exception as firebase_error:
-                logger.error(f"Auth failed: Native JWT invalid AND Firebase failed: {firebase_error}")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid authentication token",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        if user_id is None:
+            raise JWTError("Invalid token payload")
+            
         # Get user from DB
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
-            # If valid Firebase token but no user, create one (lazy sync)
-            # For native auth, user should already exist from signup
-            user = User(
-                id=user_id,
-                email=email,
-                display_name=email.split("@")[0] if email else "User"
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
             )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
         
         return {
             "uid": user.id,
@@ -181,6 +163,13 @@ async def get_current_user(
             "name": user.display_name
         }
         
+    except JWTError as e:
+        logger.error(f"JWT decode error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -206,6 +195,4 @@ async def get_user_profile(current_user: dict = Depends(get_current_user), db: S
 @router.post("/verify")
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Simple verification endpoint"""
-    # Reuse get_current_user login to verify
-    # In a real app we might optimize this, but this is sufficient
     return {"valid": True}

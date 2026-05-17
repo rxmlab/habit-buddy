@@ -16,7 +16,7 @@ graph TD
     end
     
     subgraph Backend [Serverless API]
-        FastAPI[FastAPI (Vercel)]
+        FastAPI[FastAPI]
         AuthMiddleware[Auth Middleware]
         Endpoints[API Endpoints]
     end
@@ -52,7 +52,7 @@ graph TD
 | **Backend** | Python FastAPI | REST API for complex logic |
 | **Database** | PostgreSQL / SQLite | Relational data storage |
 | **Auth** | Firebase Auth | User identity management |
-| **Hosting** | Firebase (FE) / Vercel (BE) | Deployment infrastructure |
+| **Hosting** | Firebase (FE) | Deployment infrastructure |
 
 ## 📂 Component Details
 
@@ -67,7 +67,7 @@ Located in `projects/habit-buddy/src/app`
 - **Offline First**: Firestore offline persistence + Service Worker caching.
 
 ### 2. Backend (FastAPI)
-Located in `backend/` or `vercel-backend/`
+Located in `backend/`
 - **Entry Point**: `main.py`
 - **Role**:
     - Validates complex business logic.
@@ -125,14 +125,3 @@ We utilize a **Hybrid Serverless** approach to maximize performance and minimize
     - **SPA Rewrites**: Configured to handle Angular routing.
 - **Config**: `firebase.json`
 
-### 2. Backend: Vercel
-- **Role**: Hosts the FastAPI Python application.
-- **Optimization**:
-    - **Serverless**: Scales to zero when unused, infinite scaling under load.
-    - **Cold Starts**: Optimized Python runtime (`@vercel/python`).
-    - **Edge Network**: Requests routed to nearest region.
-- **Config**: `vercel-backend/vercel.json`
-
-### Why this split?
-- **Best of Breed**: Firebase excels at static hosting + auth/db integration. Vercel provides a superior developer experience and runtime for serverless Python compared to Cloud Functions.
-- **Cost Efficiency**: Both platforms offer generous free tiers suitable for this project scale.

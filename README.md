@@ -5,8 +5,6 @@
 ## 🌐 Live Application
 
 - **Frontend:** https://abhyatus.web.app
-- **Backend API:** https://vercel-backend-48uqipo4b-rams-projects-5a6c8b73.vercel.app
-- **API Docs:** https://vercel-backend-48uqipo4b-rams-projects-5a6c8b73.vercel.app/docs
 
 ## ✨ Features
 
@@ -41,7 +39,7 @@
 ### Prerequisites
 - Node.js 18+
 - Firebase CLI
-- Vercel CLI (for backend deployment)
+
 
 ### Installation
 ```bash
@@ -56,7 +54,7 @@ npm install
 npm install firebase @angular/fire
 
 # Install CLI tools
-npm install -g firebase-tools vercel
+npm install -g firebase-tools
 ```
 
 ### Firebase Setup
@@ -94,9 +92,6 @@ npm install -g firebase-tools vercel
 npm run build
 firebase deploy --only hosting
 
-# Deploy backend to Vercel
-cd vercel-backend
-vercel --prod
 ```
 
 ## 🏗️ Architecture
@@ -111,7 +106,7 @@ Angular PWA
 └── Route guards (Authentication)
 ```
 
-### Backend (FastAPI + Vercel)
+### Backend (FastAPI)
 ```
 FastAPI REST API
 ├── Firestore integration
@@ -142,10 +137,10 @@ habit-buddy/
 │   │   ├── features/            # Feature modules
 │   │   └── shared/              # Shared services & models
 │   └── src/environments/        # Environment configs
-├── vercel-backend/              # FastAPI backend
-│   ├── main.py                 # API endpoints
-│   ├── requirements.txt        # Python dependencies
-│   └── vercel.json            # Vercel configuration
+├── backend/                     # FastAPI backend
+│   ├── app/                     # API routes and models
+│   ├── main.py                  # API endpoints
+│   └── requirements.txt         # Python dependencies
 ├── deploy.sh                   # Deployment script
 ├── firebase.json              # Firebase configuration
 └── angular.json               # Angular configuration
@@ -165,7 +160,7 @@ habit-buddy/
 - **FastAPI** - Modern Python web framework
 - **Pydantic** - Data validation
 - **Firebase Admin SDK** - Server-side Firebase
-- **Vercel** - Serverless deployment
+
 
 ### Database
 - **Firestore** - NoSQL document database
@@ -215,11 +210,7 @@ habit-buddy/
 - **Authentication:** Google Sign-In
 - **Database:** Direct Firestore access
 
-### Backend (Vercel)
-- **URL:** https://vercel-backend-48uqipo4b-rams-projects-5a6c8b73.vercel.app
-- **Documentation:** Auto-generated API docs
-- **Health Check:** `/health` endpoint
-- **Database:** Firestore integration
+
 
 ## 🔄 Development Workflow
 

@@ -2,7 +2,7 @@
 
 ## ❌ **CURRENT API STATUS:**
 
-### **Current Vercel Backend (`main.py`):**
+### **Current Backend (`main.py`):**
 - ❌ **No proper schemas** - Uses basic `dict` types
 - ❌ **Mock data only** - No real database integration
 - ❌ **No authentication** - No Firebase token verification

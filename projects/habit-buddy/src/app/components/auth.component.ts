@@ -96,16 +96,7 @@ export class AuthComponent implements OnInit, OnDestroy {
     }
   }
 
-  async signInWithGoogle(): Promise<void> {
-    try {
-      this.errorMessage = '';
-      await this.authService.signInWithGoogle();
-      // Redirect to goals page after successful Google authentication
-      this.router.navigate(['/goals']);
-    } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Google sign-in failed';
-    }
-  }
+
 
   getFieldError(fieldName: string): string {
     const field = this.authForm.get(fieldName);
